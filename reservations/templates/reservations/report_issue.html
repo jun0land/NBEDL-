@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>오류 및 고장 신고</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card shadow-sm p-4">
+        <h2 class="text-center mb-4">⚠️ 장비 고장 및 오류 신고</h2>
+        <p class="text-muted text-center">장비의 이상 증상이나 시스템 오류를 적어주시면 관리자가 확인 후 조치하겠습니다.</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label"><strong>오류/고장 제목</strong></label>
+                <input type="text" class="form-control" name="title" placeholder="예: 챔버 진공 펌프 압력 저하 이상" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><strong>상세 내용 및 증상</strong></label>
+                <textarea class="form-control" name="description" rows="6" placeholder="발생 시간, 구체적인 에러 메시지나 증상을 적어주세요." required></textarea>
+            </div>
+            <div class="row g-2">
+                <div class="col">
+                    <button type="submit" class="btn btn-danger w-100">신고 접수하기</button>
+                </div>
+                <div class="col">
+                    <a href="{% url 'reservations:reservation_page' %}" class="btn btn-outline-secondary w-100">취소</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

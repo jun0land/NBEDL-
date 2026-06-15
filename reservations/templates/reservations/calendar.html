@@ -1,0 +1,349 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구 장비 예약 시스템</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+    
+    <style>
+        body { font-family: 'Pretendard', sans-serif !important; background-color: #f8f9fa; padding-top: 50px; }
+        #calendar { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        .fc-event {
+            white-space: normal !important;
+            word-break: break-all !important;
+            padding: 4px 6px !important;
+            margin-bottom: 3px !important;
+            font-size: 0.85em !important;
+            line-height: 1.3 !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        .fc-daygrid-day { position: relative !important; }
+        .add-event-btn {
+            position: absolute;
+            bottom: 5px; right: 5px;
+            width: 22px; height: 22px;
+            background-color: #ed542b;
+            color: white;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transition: background-color 0.2s;
+        }
+        .add-event-btn:hover { background-color: #f68b21; }
+        .fc-daygrid-day:hover .add-event-btn { display: block !important; }
+
+        #sidebar-content { max-height: 550px; overflow-y: auto; }
+        
+        .fc .fc-button-primary { background-color: #ed542b !important; border-color: #ed542b !important; }
+        .fc .fc-button-primary:hover { background-color: #f68b21 !important; border-color: #f68b21 !important; }
+        .fc .fc-daygrid-day-number { color: #948a88 !important; font-weight: 500; }
+        .fc .fc-day-today .fc-daygrid-day-number { color: #ed542b !important; font-weight: bold; }
+        .fc .fc-col-header-cell-cushion { color: #948a88 !important; font-weight: 600; text-decoration: none !important; }
+
+        .card { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card-header { background-color: #948a88 !important; }
+        
+        .btn-primary { background-color: #ed542b !important; border-color: #ed542b !important; }
+        .btn-outline-info { border-color: #948a88 !important; color: #948a88 !important; }
+        .btn-outline-info:hover { background-color: #948a88 !important; color: white !important; }
+        .btn-outline-danger { border-color: #f68b21 !important; color: #f68b21 !important; }
+        .btn-outline-danger:hover { background-color: #f68b21 !important; color: white !important; }
+
+        @media (max-width: 768px) {
+            .container-fluid { padding-left: 15px !important; padding-right: 15px !important; }
+            body { padding-top: 20px; }
+            .fc .fc-toolbar { flex-direction: column; gap: 12px; }
+            .fc .fc-toolbar-title { font-size: 1.3rem !important; text-align: center; }
+            #calendar { padding: 10px; }
+            .fc-event { font-size: 0.7em !important; padding: 2px 4px !important; }
+            .add-event-btn { width: 28px; height: 28px; line-height: 26px; font-size: 18px; bottom: 2px; right: 2px; }
+            h2.fw-bold { font-size: 1.5rem; }
+            h2.fw-bold img { height: 30px !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid px-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="m-0 fw-bold text-dark">
+            <img src="{% static 'images/자산 1.png' %}" alt="NBEDL 로고" style="height: 40px; vertical-align: middle; margin-right: 10px;">
+            NBEDL 장비 예약
+        </h2>
+        <div>
+            {% if user.is_authenticated %}
+                <span class="me-3">
+                    <strong>{% if user.is_staff %}⚙️ 시스템 관리자{% else %}🧑‍🔬 {{ user.username }}{% endif %}</strong>님 환영합니다!
+                </span>
+                <a href="{% url 'reservations:mypage' %}" class="btn btn-outline-info btn-sm me-2">{% if user.is_staff %}⚙️ 전체 예약 관리{% else %}내 예약 관리{% endif %}</a>
+                <a href="{% url 'reservations:report_issue' %}" class="btn btn-danger btn-sm me-2">⚠️ 오류 신고</a>
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">로그아웃</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">로그인</a>
+                <a href="{% url 'reservations:signup' %}" class="btn btn-primary btn-sm">회원가입</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body bg-white rounded d-flex align-items-center gap-3 py-2">
+            <span class="fw-bold text-secondary text-nowrap"><span class="fs-5">🔍</span> 장비별 모아보기 :</span>
+            <select id="calendar-equipment-filter" class="form-select form-select-sm border-secondary fw-semibold text-dark" style="max-width: 250px;">
+                <option value="">전체 장비 스케줄 보기</option>
+                {% for eq in equipments %}
+                    <option value="{{ eq.id }}">{{ eq.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 col-xl-9 mb-4">
+            <div id='calendar'></div>
+        </div>
+        
+        <div class="col-lg-4 col-xl-3 mb-4">
+            <div class="card shadow-sm h-100" style="min-height: 600px;">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="card-title m-0 fw-bold" id="sidebar-title">📋 일일 예약 현황</h5>
+                </div>
+                <div class="card-body p-0 d-flex flex-column" id="sidebar-body">
+                    <div class="my-auto text-center py-5 text-muted px-3" id="sidebar-placeholder">
+                        <p class="fs-1 mb-2">👈</p>
+                        <h5 class="fw-bold text-secondary">날짜를 클릭하시오</h5>
+                        <small class="text-wrap d-block mt-2">달력에서 날짜 셀을 클릭하시면<br>해당 일자의 상세 타임라인 목록이 표시됩니다.</small>
+                    </div>
+                    <div id="sidebar-content" class="p-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reservationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">{% if user.is_staff %}장비 예약 및 점검 신청{% else %}장비 예약 신청{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-primary">예약할 장비 선택</label>
+            <select class="form-select border-primary" name="equipment" required>
+                <option value="" selected disabled>사용하실 장비를 선택해 주세요</option>
+                {% for eq in equipments %}
+                    <option value="{{ eq.id }}">{{ eq.name }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          <div class="row mb-3">
+            <div class="col">
+                <label class="form-label fw-semibold">시작 일시</label>
+                <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+            </div>
+            <div class="col">
+                <label class="form-label fw-semibold">종료 일시</label>
+                <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">예약자 소속</label>
+            <input type="text" class="form-control" name="affiliation" value="{% if user.is_staff %}시스템 관리자{% endif %}" placeholder="예: 동국대학교 연구실" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if user.is_staff %}샘플명 (또는 점검명){% else %}샘플명{% endif %}</label>
+            <input type="text" class="form-control" name="sample_name" placeholder="예: Si" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">세부 정보</label>
+            <textarea class="form-control" name="sample_details" rows="3" placeholder="측정 조건이나 주의사항을 적어주세요."></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary">📄 추가 자료 첨부 (선택사항)</label>
+            <input type="file" class="form-control" name="attached_file" accept=".pdf,.png,.jpg,.jpeg">
+            <small class="text-muted">PDF 또는 이미지 파일만 업로드 가능합니다.</small>
+          </div>
+          <div class="d-grid gap-2">
+            {% if user.is_authenticated %}
+                <button type="submit" class="btn btn-primary fw-bold">신청하기</button>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-secondary fw-bold">로그인 후 예약할 수 있습니다</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="detailInfoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold" id="detailTitle">예약 상세 정보</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 border-bottom pb-2">
+          <label class="text-muted small fw-bold">예약 장비</label>
+          <p class="fs-6 fw-bold text-primary mb-0" id="detailEquipment"></p>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-bold">샘플명 (점검명)</label>
+          <p class="fs-5 fw-semibold mb-0" id="detailSample"></p>
+        </div>
+        <div>
+          <label class="text-muted small fw-bold">세부 정보</label>
+          <div class="p-3 bg-light rounded" id="detailDetails" style="min-height: 80px; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var resModal = new bootstrap.Modal(document.getElementById('reservationModal'));
+        
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          locale: 'ko',
+          selectable: true,
+          events: '/api/reservations/',
+          displayEventTime: false, 
+          eventDisplay: 'block', 
+          
+          dayCellDidMount: function(info) {
+            let btn = document.createElement('div');
+            btn.className = 'add-event-btn';
+            btn.innerHTML = '+';
+            btn.title = '이 날짜에 새로운 일정 예약하기';
+            
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation(); 
+                document.getElementById('start_time').value = info.dateStr + "T09:00";
+                document.getElementById('end_time').value = info.dateStr + "T18:00";
+                resModal.show();
+            });
+            info.el.appendChild(btn);
+          },
+          
+          dateClick: function(info) {
+            let clickedDateStr = info.dateStr;
+            document.getElementById('sidebar-placeholder').style.setProperty('display', 'none', 'important');
+            document.getElementById('sidebar-title').innerText = `📅 ${clickedDateStr} 상세 현황`;
+            
+            let allEvents = calendar.getEvents();
+            let dayEvents = allEvents.filter(function(event) {
+                return event.startStr && event.startStr.split('T')[0] === clickedDateStr;
+            });
+            
+            let contentEl = document.getElementById('sidebar-content');
+            contentEl.innerHTML = '';
+            
+            if (dayEvents.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <p class="fs-3">🍃</p>
+                        <p class="small m-0">해당 날짜에 등록된<br>예약이나 정비 일정이 없습니다.</p>
+                    </div>`;
+            } else {
+                let ul = document.createElement('ul');
+                ul.className = 'list-group list-group-flush';
+                
+                dayEvents.forEach(function(event) {
+                    let li = document.createElement('li');
+                    li.className = 'list-group-item border-start border-4 py-3 px-3 mb-2 shadow-sm rounded-end';
+                    
+                    if (event.backgroundColor === '#dc3545') {
+                        li.style.borderColor = '#dc3545';
+                        li.classList.add('bg-danger-subtle');
+                    } else if (event.backgroundColor === '#ed542b') {
+                        li.style.borderColor = '#ed542b';
+                        li.classList.add('bg-warning-subtle');
+                    } else {
+                        li.style.borderColor = '#948a88';
+                        li.classList.add('bg-light');
+                    }
+                    
+                    li.innerHTML = `<div class="fw-bold text-dark text-break small">${event.title}</div>`;
+                    ul.appendChild(li);
+                });
+                contentEl.appendChild(ul);
+            }
+          },
+          eventClick: function(info) {
+              document.getElementById('detailTitle').innerText = info.event.title;
+              document.getElementById('detailEquipment').innerText = info.event.extendedProps.equipment_name || '정보 없음';
+              document.getElementById('detailSample').innerText = info.event.extendedProps.sample_name || '정보 없음';
+              document.getElementById('detailDetails').innerText = info.event.extendedProps.sample_details || '입력된 세부 정보가 없습니다.';
+              
+              var detailModal = new bootstrap.Modal(document.getElementById('detailInfoModal'));
+              detailModal.show();
+          }
+        });
+        calendar.render();
+
+        // ✨ 추가: 셀렉트박스 변경 시 달력 스케줄 동적 동기화
+        document.getElementById('calendar-equipment-filter').addEventListener('change', function() {
+            var selectedId = this.value;
+            var apiUrl = '/api/reservations/';
+            if (selectedId) {
+                apiUrl += '?equipment=' + selectedId;
+            }
+            calendar.removeAllEventSources();
+            calendar.addEventSource(apiUrl);
+        });
+    }
+
+    var resForm = document.querySelector('#reservationModal form');
+    if (resForm) {
+        resForm.addEventListener('submit', function(e) {
+            var startTime = new Date(document.getElementById('start_time').value);
+            var endTime = new Date(document.getElementById('end_time').value);
+            var now = new Date();
+
+            if (startTime < now) {
+                e.preventDefault(); 
+                alert("과거의 시간으로는 예약할 수 없습니다.");
+                return false;
+            }
+
+            if (endTime <= startTime) {
+                e.preventDefault(); 
+                alert("종료 일시는 시작 일시보다 나중이어야 합니다.");
+               return false;
+            }
+        });
+    }
+  });
+</script>
+</body>
+</html>
