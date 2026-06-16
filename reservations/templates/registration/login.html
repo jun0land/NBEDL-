@@ -7,15 +7,38 @@
 </head>
 <body class="bg-light">
 <div class="container mt-5" style="max-width: 500px;">
-    <div class="card shadow-sm p-4">
-        <h2 class="text-center mb-4">로그인</h2>
+    <div class="card shadow-sm p-4 border-0">
+        <h2 class="text-center mb-4 fw-bold" style="color: #ed542b;">로그인</h2>
+        
+        <!-- ✨ 1. 커스텀 에러 메시지(아이디/비밀번호 오류)가 뜨는 공간 -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-danger py-2 text-center" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         <form method="POST">
             {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-success w-100 mt-3">로그인</button>
+            
+            <!-- ✨ 2. {{ form.as_p }} 대신 예쁜 부트스트랩 입력창 직접 만들기 -->
+            <div class="mb-3">
+                <label for="username" class="form-label fw-bold">아이디</label>
+                <input type="text" class="form-control" id="username" name="username" required autofocus>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label fw-bold">비밀번호</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-success w-100 py-2 fw-bold" style="background-color: #ed542b; border-color: #ed542b;">로그인</button>
         </form>
-        <div class="text-center mt-3">
-            <a href="{% url 'reservations:signup' %}" class="text-decoration-none">아직 계정이 없으신가요? 회원가입</a>
+        
+        <div class="text-center mt-4 pt-3 border-top">
+            <span class="text-muted small">아직 연구실 계정이 없으신가요?</span><br>
+            <a href="{% url 'reservations:signup' %}" class="text-decoration-none fw-bold" style="color: #948a88;">회원가입하기</a>
         </div>
     </div>
 </div>

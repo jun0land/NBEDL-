@@ -289,3 +289,30 @@ def toggle_system_config(request):
         
     config.save()
     return JsonResponse({'success': True})
+
+from django.contrib.auth import authenticate, login as auth_login
+from django.contrib.auth.models import User
+from django.shortcuts import render, redirect
+from django.contrib import messages
+
+# ✨ 디테일한 에러 메시지를 주는 커스텀 로그인 뷰
+def custom_login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # 1. 아이디 존재 여부 확인
+        if not User.objects.filter(username=username).exists():
+            messages.error(request, "등록되지 않은 아이디입니다.")
+            return render(request, 'registration/login.html') # 로그인 템플릿 경로에 맞게 수정 필요 시 'reservations/login.html' 사용
+
+        # 2. 비밀번호 확인 및 로그인
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            auth_login(request, user)
+            return redirect('reservations:reservation_page')
+        else:
+            messages.error(request, "비밀번호가 틀렸습니다.")
+            return render(request, 'registration/login.html')
+
+    return render(request, 'registration/login.html')

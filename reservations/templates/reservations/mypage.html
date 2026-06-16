@@ -33,140 +33,138 @@
         {% endfor %}
     {% endif %}
 
-    <div class="row">
-        {% if user.is_staff %}
-        <div class="col-xl-3 col-lg-4 mb-4">
-            <div class="card shadow-sm sidebar-menu">
-                <div class="card-header bg-dark text-white fw-bold py-3">
-                    🛠️ 시스템 관리 메뉴
-                </div>
-                <div class="list-group list-group-flush">
-                    <a href="{% url 'reservations:mypage' %}" class="list-group-item list-group-item-action active fw-bold d-flex justify-content-between align-items-center">
-                        <span>📋 전체 예약 승인/관리</span>
-                        {% if pending_count > 0 %}
-                            <span class="badge bg-danger rounded-pill shadow-sm" style="font-size: 0.85em;">{{ pending_count }}건 대기</span>
-                        {% endif %}
-                    </a>
-                    <a href="/admin/reservations/equipment/" target="_blank" class="list-group-item list-group-item-action fw-semibold text-secondary">
-                        🔬 연구 장비 추가 및 편집 ↗
-                    </a>
-                    <a href="/admin/reservations/issuereport/" target="_blank" class="list-group-item list-group-item-action fw-semibold text-secondary">
-                        ⚠️ 기기 오류/고장 신고 접수함 ↗
-                    </a>
-                    <a href="/admin/auth/user/" target="_blank" class="list-group-item list-group-item-action fw-semibold text-secondary">
-                        👥 일반 회원 계정 관리 ↗
-                    </a>
-                </div>
-                <div class="card-footer bg-light small text-muted text-center py-2">
-                    새 탭에서 관리 창이 열립니다.
-                </div>
+<div class="row">
+    <!-- 왼쪽: 시스템 관리 메뉴 (사이드바) -->
+    {% if user.is_staff %}
+    <div class="col-xl-3 col-lg-4 mb-4">
+        <div class="card shadow-sm sidebar-menu border-0">
+            <div class="card-header text-white fw-bold py-3" style="background-color: #343a40;">
+                🛠️ 시스템 관리 메뉴
+            </div>
+            
+            <div class="list-group list-group-flush">
+                <a href="{% url 'reservations:mypage' %}" class="list-group-item list-group-item-action active fw-bold d-flex justify-content-between align-items-center" style="background-color: #ed542b; border-color: #ed542b;">
+                    <span>📋 전체 예약 승인/관리</span>
+                    {% if pending_count > 0 %}
+                        <span class="badge bg-white text-danger rounded-pill shadow-sm" style="font-size: 0.85em;">{{ pending_count }}건 대기</span>
+                    {% endif %}
+                </a>
+                
+                <a href="/admin/reservations/notice/" target="_blank" class="list-group-item list-group-item-action fw-bold px-4 py-3">
+                    📢 <span class="ms-2">공지사항 관리</span>
+                </a>
+                <a href="/admin/reservations/issuereport/" target="_blank" class="list-group-item list-group-item-action fw-bold px-4 py-3">
+                    ⚠️ <span class="ms-2">오류 및 문의 접수함</span>
+                </a>
+                <a href="/admin/reservations/equipment/" target="_blank" class="list-group-item list-group-item-action fw-bold px-4 py-3">
+                    🔬 <span class="ms-2">연구 장비 추가 및 편집</span>
+                </a>
+                <a href="/admin/reservations/userprofile/" target="_blank" class="list-group-item list-group-item-action fw-bold px-4 py-3">
+                    🧑‍🔬 <span class="ms-2">일반 회원 계정 관리</span>
+                </a>
+            </div>
+
+            <div class="card-footer bg-light small text-muted text-center py-2 border-top-0">
+                새 탭에서 관리 창이 열립니다.
             </div>
         </div>
-        {% endif %}
+    </div>
+    {% endif %}
 
-        <div class="{% if user.is_staff %}col-xl-9 col-lg-8{% else %}col-12{% endif %} mb-4">
-            <div class="card shadow-sm">
-                
-                {% if user.is_staff %}
-                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="fw-bold text-secondary"><span class="text-primary">●</span> 예약 기기 필터링</div>
-                    <form method="GET" action="" class="d-flex gap-2">
-                        <select name="equipment" class="form-select form-select-sm" style="width: 200px;">
-                            <option value="">모든 기기 예약 보기</option>
-                            {% for eq in equipments %}
-                                <option value="{{ eq.id }}" {% if selected_equipment == eq.id|stringformat:"s" %}selected{% endif %}>{{ eq.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-dark btn-sm text-nowrap">조회</button>
-                    </form>
-                </div>
-                {% endif %}
+    <!-- 오른쪽: 예약 내역 테이블 -->
+    <div class="{% if user.is_staff %}col-xl-9 col-lg-8{% else %}col-12{% endif %} mb-4">
+        <div class="card shadow-sm">
+            {% if user.is_staff %}
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="fw-bold text-secondary"><span class="text-primary">●</span> 예약 기기 필터링</div>
+                <form method="GET" action="" class="d-flex gap-2">
+                    <select name="equipment" class="form-select form-select-sm" style="width: 200px;">
+                        <option value="">모든 기기 예약 보기</option>
+                        {% for eq in equipments %}
+                            <option value="{{ eq.id }}" {% if selected_equipment == eq.id|stringformat:"s" %}selected{% endif %}>{{ eq.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-dark btn-sm text-nowrap">조회</button>
+                </form>
+            </div>
+            {% endif %}
 
-                <div class="card-body p-0">
-                    <table class="table table-hover text-center align-middle m-0">
-                        <thead class="table-light">
-                            <tr>
-                                {% if user.is_staff %}
-                                    <th>예약자</th>
-                                    <th>첨부파일</th>
-                                {% endif %}
-                                <th>기기명</th>
-                                <th>소속</th> 
-                                <th>시작 일시</th> 
-                                <th>종료 일시</th>
-                                <th>샘플명</th> 
-                                <th>상태</th> 
-                                <th>관리</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for res in reservations %}
-                            <tr>
-                                {% if user.is_staff %}
-                                    <td class="fw-bold text-dark">{{ res.user.username }}</td>
-                                    <td>
-                                        {% if res.attached_file %}
-                                            <a href="{{ res.attached_file.url }}" class="btn btn-outline-dark btn-sm px-2 py-0 fs-7 shadow-sm" target="_blank">💾 다운</a>
-                                        {% else %}
-                                            <span class="text-muted small">없음</span>
-                                        {% endif %}
-                                    </td>
-                                {% endif %}
-                                <td><span class="badge bg-light text-dark border fw-bold">{{ res.equipment.name|default:"공통" }}</span></td>
-                                <td>{{ res.affiliation }}</td> 
-                                <td class="small">{{ res.start_time|date:"Y-m-d H:i" }}</td>
-                                <td class="small">{{ res.end_time|date:"Y-m-d H:i" }}</td>
-                                <td><code>{{ res.sample_name }}</code></td>
+            <div class="card-body p-0">
+                <table class="table table-hover text-center align-middle m-0">
+                    <thead class="table-light">
+                        <tr>
+                            {% if user.is_staff %}
+                                <th>예약자</th>
+                                <th>첨부파일</th>
+                            {% endif %}
+                            <th>기기명</th>
+                            <th>소속</th> 
+                            <th>시작 일시</th> 
+                            <th>종료 일시</th>
+                            <th>샘플명</th> 
+                            <th>상태</th> 
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in reservations %}
+                        <tr>
+                            {% if user.is_staff %}
+                                <td class="fw-bold text-dark">{{ res.user.username }}</td>
                                 <td>
-                                    {% if res.status == 'APPROVED' %}
-                                        <span class="badge bg-primary">승인됨</span>
-                                    {% elif res.status == 'REJECTED' %}
-                                        <span class="badge bg-danger">반려됨</span>
-                                        {% if res.rejection_reason %}
-                                            <div class="small text-danger mt-1 text-start" style="max-width: 150px; font-size: 0.75rem; margin: 0 auto;">
-                                                <strong>사유:</strong> {{ res.rejection_reason }}
-                                            </div>
-                                        {% endif %}
+                                    {% if res.attached_file %}
+                                        <a href="{{ res.attached_file.url }}" class="btn btn-outline-dark btn-sm px-2 py-0 fs-7 shadow-sm" target="_blank">💾 다운</a>
                                     {% else %}
-                                        <span class="badge bg-secondary">대기 중</span>
+                                        <span class="text-muted small">없음</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        {% if user.is_staff %}
-                                            {% if res.status == 'PENDING' %}
-                                                <form method="POST" action="{% url 'reservations:approve_reservation' res.id %}" class="m-0">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-success btn-sm py-1 text-nowrap">승인</button>
-                                                </form>
-                                                <form method="POST" action="{% url 'reservations:reject_reservation' res.id %}" class="d-flex gap-1 m-0">
-                                                    {% csrf_token %}
-                                                    <input type="text" name="rejection_reason" class="form-control form-control-sm py-1" placeholder="반려사유" required style="width: 70px; font-size: 0.8rem;">
-                                                    <button type="submit" class="btn btn-warning btn-sm text-nowrap py-1">반려</button>
-                                                </form>
-                                            {% else %}
-                                                <form method="POST" action="{% url 'reservations:revert_reservation' res.id %}" class="m-0">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-secondary btn-sm py-1 text-nowrap shadow-sm">↺ 대기로 복구</button>
-                                                </form>
-                                            {% endif %}
-                                        {% endif %}
-                                        
-                                        <form method="POST" action="{% url 'reservations:cancel_reservation' res.id %}" class="m-0">
+                            {% endif %}
+                            <td><span class="badge bg-light text-dark border fw-bold">{{ res.equipment.name|default:"공통" }}</span></td>
+                            <td>{{ res.affiliation }}</td> 
+                            <td class="small">{{ res.start_time|date:"Y-m-d H:i" }}</td>
+                            <td class="small">{{ res.end_time|date:"Y-m-d H:i" }}</td>
+                            <td><code>{{ res.sample_name }}</code></td>
+                            <td>
+                                {% if res.status == 'APPROVED' %}
+                                    <span class="badge bg-primary">승인됨</span>
+                                {% elif res.status == 'REJECTED' %}
+                                    <span class="badge bg-danger">반려됨</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">대기 중</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                    {% if user.is_staff and res.status == 'PENDING' %}
+                                        <form method="POST" action="{% url 'reservations:approve_reservation' res.id %}" class="m-0">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger btn-sm py-1 text-nowrap" onclick="return confirm('정말 이 예약을 취소/삭제하시겠습니까?');">취소</button>
+                                            <button type="submit" class="btn btn-success btn-sm py-1 text-nowrap">승인</button>
                                         </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="{% if user.is_staff %}9{% else %}7{% endif %}" class="text-muted py-5">등록된 예약 내역이 존재하지 않습니다.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                        <form method="POST" action="{% url 'reservations:reject_reservation' res.id %}" class="d-flex gap-1 m-0">
+                                            {% csrf_token %}
+                                            <input type="text" name="rejection_reason" class="form-control form-control-sm py-1" placeholder="반려사유" required style="width: 70px; font-size: 0.8rem;">
+                                            <button type="submit" class="btn btn-warning btn-sm text-nowrap py-1">반려</button>
+                                        </form>
+                                    {% elif user.is_staff %}
+                                        <form method="POST" action="{% url 'reservations:revert_reservation' res.id %}" class="m-0">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-secondary btn-sm py-1 text-nowrap shadow-sm">↺ 복구</button>
+                                        </form>
+                                    {% endif %}
+                                    <form method="POST" action="{% url 'reservations:cancel_reservation' res.id %}" class="m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm py-1 text-nowrap" onclick="return confirm('취소하시겠습니까?');">취소</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if user.is_staff %}9{% else %}7{% endif %}" class="text-muted py-5">등록된 예약 내역이 존재하지 않습니다.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

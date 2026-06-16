@@ -18,9 +18,12 @@ from django.contrib import admin
 from django.urls import path, include  # include 도구를 추가로 불러옵니다.
 from django.conf import settings
 from django.conf.urls.static import static
+from reservations import views as res_views  # ✨ 추가
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # ✨ 기존 로그인 주소를 가로채서 커스텀 뷰로 연결
+    path('accounts/login/', res_views.custom_login_view, name='login'),
     # 아래 한 줄을 추가합니다. (로그인, 로그아웃 기본 기능 제공)
     path('accounts/', include('django.contrib.auth.urls')),
     # 기본 주소로 접속하면 reservations 앱의 urls.py로 안내해라
