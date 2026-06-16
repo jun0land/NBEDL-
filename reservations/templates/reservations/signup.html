@@ -7,17 +7,43 @@
 </head>
 <body class="bg-light">
 <div class="container mt-5" style="max-width: 500px;">
-    <div class="card shadow-sm p-4">
-        <h2 class="text-center mb-4">회원가입</h2>
+    <div class="card shadow-sm p-4 border-0">
+        <h2 class="text-center mb-4 fw-bold" style="color: #ed542b;">회원가입</h2>
+        
         <form method="POST">
             {% csrf_token %}
-            {{ form.as_p }}
-            <div class="mb-3 mt-3">
-                <label for="affiliation" class="form-label" style="color: #948a88; font-weight: 600;">소속 (학교/지도교수)</label>
+            
+            <!-- 아이디 입력 -->
+            <div class="mb-3">
+                <label for="username" class="form-label fw-bold">아이디</label>
+                <input type="text" class="form-control" id="username" name="username" required placeholder="영문, 숫자 포함 4자 이상" autofocus>
+            </div>
+            
+            <!-- 비밀번호 입력 -->
+            <div class="mb-3">
+                <label for="password" class="form-label fw-bold">비밀번호</label>
+                <input type="password" class="form-control" id="password" name="password" required placeholder="영문, 숫자, 특수문자 조합 8자 이상">
+            </div>
+            
+            <!-- 비밀번호 확인(선택사항이나 권장) -->
+            <div class="mb-3">
+                <label for="password_confirm" class="form-label fw-bold">비밀번호 확인</label>
+                <input type="password" class="form-control" id="password_confirm" name="password_confirm" required>
+            </div>
+
+            <!-- 소속 (기존 유지) -->
+            <div class="mb-4">
+                <label for="affiliation" class="form-label fw-bold" style="color: #6c757d;">소속 (학교/지도교수)</label>
                 <input type="text" class="form-control" id="affiliation" name="affiliation" required placeholder="예: 동국대학교 권순철 교수님 연구실" style="border: 2px solid #fbb812;">
             </div>
-            <button type="submit" class="btn btn-primary w-100 mt-3">가입하기</button>
+            
+            <button type="submit" class="btn btn-success w-100 py-2 fw-bold" style="background-color: #ed542b; border-color: #ed542b;">가입하기</button>
         </form>
+        
+        <div class="text-center mt-4 pt-3 border-top">
+            <span class="text-muted small">이미 계정이 있으신가요?</span>
+            <a href="{% url 'reservations:login' %}" class="text-decoration-none fw-bold ms-2" style="color: #948a88;">로그인하기</a>
+        </div>
     </div>
 </div>
 </body>

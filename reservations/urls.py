@@ -4,6 +4,7 @@ from . import views
 app_name = 'reservations'
 
 urlpatterns = [
+    path('login/', views.custom_login_view, name='login'), 
     path('', views.reservation_page, name='reservation_page'),
     path('api/reservations/', views.get_reservations, name='get_reservations'),
     path('mypage/', views.mypage, name='mypage'),
