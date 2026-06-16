@@ -1,19 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# ✨ 1. 새롭게 추가된 '장비' 테이블
+# ✨ 1. 기존 '장비' 테이블에 '시간당 요금'을 하나로 합쳤습니다.
 class Equipment(models.Model):
     name = models.CharField(max_length=100) # 예: 스핀 코터, Sputter System
     description = models.TextField(blank=True) # 장비 설명이나 위치
+    hourly_rate = models.IntegerField(default=0, verbose_name="시간당 이용 금액(원)") # 추가된 부분!
 
     def __str__(self):
         return self.name
 
-# 2. 기존 '예약' 테이블 확장
+# 2. 기존 '예약' 테이블
 class Reservation(models.Model):
-    # ✨ 추가됨: 이 예약이 어떤 장비에 대한 것인지 연결
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, null=True, blank=True)
-    
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
@@ -28,7 +27,7 @@ class Reservation(models.Model):
     def __str__(self):
         return f"[{self.affiliation}] {self.sample_name}"
 
-# 3. 오류 신고 테이블 (기존 유지)
+# 3. 오류 신고 테이블
 class IssueReport(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
@@ -37,3 +36,37 @@ class IssueReport(models.Model):
 
     def __str__(self):
         return self.title
+
+# ✨ 4. 사용자 추가 정보 (소속 및 승인 여부) 신규 생성
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    affiliation = models.CharField(max_length=100, verbose_name="소속")
+    is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
+
+    def __str__(self):
+        return f"{self.user.username} ({self.affiliation})"
+
+# ✨ 5. 공지사항 모델 신규 생성
+class Notice(models.Model):
+    title = models.CharField(max_length=200, verbose_name="공지 제목")
+    content = models.TextField(verbose_name="공지 내용")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+class SystemConfig(models.Model):
+    is_maintenance_mode = models.BooleanField(default=False, verbose_name="전체 사이트 점검 모드 (접속 차단)")
+    block_reservations = models.BooleanField(default=False, verbose_name="신규 예약 막아두기 (달력 조회는 가능)")
+    maintenance_message = models.CharField(
+        max_length=200, 
+        default="현재 시스템 정기 점검 중입니다. 이용에 불편을 드려 죄송합니다.", 
+        verbose_name="점검 안내 문구"
+    )
+
+    class Meta:
+        verbose_name = "시스템 제어판"
+        verbose_name_plural = "시스템 제어판"
+
+    def __str__(self):
+        return "시스템 글로벌 제어판"

@@ -4,51 +4,18 @@
     <meta charset="UTF-8">
     <title>로그인</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* 팔레트 및 정렬 스타일 적용 */
-        .card { border-top: 5px solid #ed542b; } /* 메인 컬러로 상단 포인트 */
-        .form-label { color: #948a88; font-weight: 600; }
-        
-        /* 입력창 디자인 (포커스 시 메인 컬러 테두리) */
-        .form-control:focus {
-            border-color: #fbb812;
-            box-shadow: 0 0 0 0.2rem rgba(251, 184, 18, 0.25);
-        }
-
-        /* 로그인 버튼 디자인 */
-        .btn-login {
-            background-color: #ed542b;
-            border: none;
-            color: white;
-            transition: background-color 0.3s;
-        }
-        .btn-login:hover {
-            background-color: #f68b21;
-            color: white;
-        }
-    </style>
 </head>
 <body class="bg-light">
-<div class="container mt-5" style="max-width: 400px;">
+<div class="container mt-5" style="max-width: 500px;">
     <div class="card shadow-sm p-4">
-        <h2 class="text-center mb-4" style="color: #ed542b;">로그인</h2>
+        <h2 class="text-center mb-4">로그인</h2>
         <form method="POST">
             {% csrf_token %}
-            
-            {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label">{{ field.label }}</label>
-                {{ field }}
-                <script>
-                    document.querySelectorAll('input').forEach(i => i.classList.add('form-control'));
-                </script>
-            </div>
-            {% endfor %}
-
-            <button type="submit" class="btn btn-login w-100 mt-3">로그인</button>
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success w-100 mt-3">로그인</button>
         </form>
         <div class="text-center mt-3">
-            <a href="{% url 'reservations:signup' %}" style="color: #948a88;">아직 계정이 없으신가요? 회원가입</a>
+            <a href="{% url 'reservations:signup' %}" class="text-decoration-none">아직 계정이 없으신가요? 회원가입</a>
         </div>
     </div>
 </div>

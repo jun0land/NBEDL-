@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>시스템 점검 안내</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #fcf8f2; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Pretendard', sans-serif; margin: 0; }
+        .maintenance-box { background: white; padding: 50px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border-top: 6px solid #ed542b; max-width: 500px; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="maintenance-box">
+        <h1 style="font-size: 60px; margin-bottom: 10px;">🛠️</h1>
+        <h3 class="fw-bold mb-4" style="color: #ed542b;">시스템 정기 점검 중입니다</h3>
+        <p class="text-muted fs-5 mb-4">{{ message }}</p>
+        <p class="small text-secondary">점검이 끝난 후 다시 접속해 주시기 바랍니다.</p>
+        
+        <div class="mt-5 text-end">
+            <a href="{% url 'login' %}" style="text-decoration: none; color: #e9ecef; font-size: 12px;">관리자 로그인</a>
+        </div>
+    </div>
+</body>
+</html>

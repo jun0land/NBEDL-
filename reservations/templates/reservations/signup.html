@@ -12,6 +12,10 @@
         <form method="POST">
             {% csrf_token %}
             {{ form.as_p }}
+            <div class="mb-3 mt-3">
+                <label for="affiliation" class="form-label" style="color: #948a88; font-weight: 600;">소속 (학교/지도교수)</label>
+                <input type="text" class="form-control" id="affiliation" name="affiliation" required placeholder="예: 동국대학교 권순철 교수님 연구실" style="border: 2px solid #fbb812;">
+            </div>
             <button type="submit" class="btn btn-primary w-100 mt-3">가입하기</button>
         </form>
     </div>

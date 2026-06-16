@@ -14,5 +14,10 @@ urlpatterns = [
     # 관리자 전용 예약 승인/반려/복구 기능
     path('approve/<int:reservation_id>/', views.approve_reservation, name='approve_reservation'),
     path('reject/<int:reservation_id>/', views.reject_reservation, name='reject_reservation'),
-    path('revert/<int:reservation_id>/', views.revert_reservation, name='revert_reservation'), # ✨ 이 부분이 추가되었습니다!
+    path('revert/<int:reservation_id>/', views.revert_reservation, name='revert_reservation'),
+    path('settlement/', views.settlement_view, name='settlement'),
+    # reservations/urls.py 내부
+    path('settlement/', views.settlement_view, name='settlement'),
+    # ✨ 스위치 API 주소 추가
+    path('toggle-config/', views.toggle_system_config, name='toggle_config'),
 ]
