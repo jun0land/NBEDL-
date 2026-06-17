@@ -79,6 +79,8 @@
 </head>
 <body>
 <div class="container-fluid px-5">
+    
+    <!-- 1. 최상단 네비게이션 헤더 -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="m-0 fw-bold text-dark">
             <img src="{% static 'images/logo.png' %}" alt="NBEDL 로고" style="height: 40px; vertical-align: middle; margin-right: 10px;">
@@ -89,7 +91,8 @@
                 <span class="me-3">
                     <strong>{% if user.is_staff %}⚙️ 시스템 관리자{% else %}🧑‍🔬 {{ user.username }}{% endif %}</strong>님 환영합니다!
                 </span>
-                <!-- ✨ 추가: 관리자용 퀵 제어판 스위치 -->
+                
+                <!-- 관리자용 퀵 제어판 스위치 -->
                 {% if user.is_staff %}
                 <span class="d-inline-flex align-items-center bg-light px-3 py-1 rounded border me-3">
                     <div class="form-check form-switch me-3 mb-0">
@@ -119,6 +122,19 @@
         </div>
     </div>
 
+    <!-- ✨ 2. (위치 수정됨) 신규 가입자 승인 대기 알림 배너 -->
+    {% if user.is_staff and pending_users_count > 0 %}
+    <div class="alert alert-warning shadow-sm border-warning d-flex align-items-center rounded-3 p-3 mb-4" role="alert">
+        <span class="fs-3 me-3">🚨</span>
+        <div>
+            <strong class="fs-5">신규 가입자 승인 대기!</strong><br>
+            현재 관리자님의 가입 승인을 기다리는 연구원이 <b class="text-danger fs-5">{{ pending_users_count }}명</b> 있습니다.
+        </div>
+        <a href="/admin/reservations/userprofile/" target="_blank" class="btn btn-warning ms-auto fw-bold text-dark shadow-sm">가입 승인하러 가기 &rarr;</a>
+    </div>
+    {% endif %}
+
+    <!-- 3. 공지사항 -->
     <div class="card mb-3 border-0 shadow-sm" style="border-left: 5px solid #ed542b !important;">
         <div class="card-body bg-white rounded py-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -133,6 +149,8 @@
                 {% for notice in notices %}
                     <li class="mb-1 text-truncate">
                         <span class="badge me-2" style="background-color: #948a88;">{{ notice.created_at|date:"m-d" }}</span> 
+                        <!-- ✨ 보너스: 상단 고정된 공지는 📌 아이콘 띄우기 -->
+                        {% if notice.is_pinned %}📌{% endif %}
                         <strong class="text-dark me-2">{{ notice.title }}</strong>
                         <span class="text-muted small">{{ notice.content }}</span>
                     </li>
@@ -299,7 +317,7 @@
           eventDisplay: 'block', 
           
           dayCellDidMount: function(info) {
-            // ✨ 조건문 시작: 예약이 열려있거나, 관리자일 때만 아래 코드를 실행합니다.
+            // 조건문 시작: 예약이 열려있거나, 관리자일 때만 아래 코드를 실행합니다.
             {% if not block_reservations or user.is_staff %}
                 let btn = document.createElement('div');
                 btn.className = 'add-event-btn';
@@ -329,7 +347,7 @@
                 });
                 info.el.appendChild(btn);
             {% endif %}
-            // ✨ 조건문 끝
+            // 조건문 끝
           },
           
           dateClick: function(info) {
@@ -388,7 +406,7 @@
         });
         calendar.render();
 
-        // ✨ 추가: 셀렉트박스 변경 시 달력 스케줄 동적 동기화
+        // 셀렉트박스 변경 시 달력 스케줄 동적 동기화
         document.getElementById('calendar-equipment-filter').addEventListener('change', function() {
             var selectedId = this.value;
             var apiUrl = '/api/reservations/';
@@ -420,7 +438,7 @@
             }
         });
     }
-    // ✨ 30분 단위 시간 선택 드롭다운 생성 (09:00 ~ 18:00)
+    // 30분 단위 시간 선택 드롭다운 생성 (09:00 ~ 18:00)
     var timeSelects = [document.getElementById('start_time_select'), document.getElementById('end_time_select')];
     timeSelects.forEach(function(select) {
         if(!select) return;
@@ -433,7 +451,7 @@
         }
     });
 
-    // ✨ 날짜와 시간을 합쳐서 Hidden Input에 넣고 요금 계산하는 함수
+    // 날짜와 시간을 합쳐서 Hidden Input에 넣고 요금 계산하는 함수
     function updateHiddenAndCalculate() {
         var sDate = document.getElementById('start_date').value;
         var sTime = document.getElementById('start_time_select').value;
@@ -447,11 +465,11 @@
         if(sDate && sTime && sHidden) sHidden.value = sDate + 'T' + sTime;
         if(eDate && eTime && eHidden) eHidden.value = eDate + 'T' + eTime;
 
-        // 요금 계산 실행 (이전 단계에서 만든 calculateCost 함수를 약간 수정해야 함)
+        // 요금 계산 실행 
         calculateCostForSplit(); 
     }
 
-    // ✨ 분리된 UI를 위한 새로운 요금 계산 함수
+    // 분리된 UI를 위한 새로운 요금 계산 함수
     function calculateCostForSplit() {
         var eqSelect = document.getElementById('equipment_select');
         var sHidden = document.getElementById('start_time_hidden');
@@ -482,7 +500,8 @@
         var elem = document.getElementById(id);
         if(elem) elem.addEventListener('change', updateHiddenAndCalculate);
     });  
-    // ✨ 추가: 스위치 클릭 시 서버로 상태 전송
+    
+    // 스위치 클릭 시 서버로 상태 전송
     function toggleConfig(field, value) {
         var payload = {};
         payload[field] = value;

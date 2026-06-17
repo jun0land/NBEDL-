@@ -42,6 +42,10 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     affiliation = models.CharField(max_length=100, verbose_name="소속")
     is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
+    
+    # ✨ 추가: 비밀번호 찾기용 지도교수 교원 번호
+    # 기존 가입자 데이터와의 충돌을 막기 위해 null=True, blank=True를 설정합니다.
+    advisor_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="지도교수 교원 번호")
 
     def __str__(self):
         return f"{self.user.username} ({self.affiliation})"
@@ -50,6 +54,7 @@ class UserProfile(models.Model):
 class Notice(models.Model):
     title = models.CharField(max_length=200, verbose_name="공지 제목")
     content = models.TextField(verbose_name="공지 내용")
+    is_pinned = models.BooleanField(default=False, verbose_name='📌 상단 고정')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

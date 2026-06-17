@@ -6,16 +6,16 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.utils import timezone
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Reservation, IssueReport, Equipment, Notice, SystemConfig
+from .models import Reservation, IssueReport, Equipment, Notice, SystemConfig, UserProfile
 import json
 from django.views.decorators.http import require_POST
 
 
 def reservation_page(request):
-    # ✨ 1. 시스템 제어판 데이터 가져오기 (DB에 없으면 기본값으로 자동 생성)
+    # 1. 시스템 제어판 데이터 가져오기 (DB에 없으면 기본값으로 자동 생성)
     config, created = SystemConfig.objects.get_or_create(id=1)
 
-    # ✨ 2. [전체 점검 모드] 켜져 있고 관리자가 아니면 점검 페이지로 강제 이동!
+    # 2. [전체 점검 모드] 켜져 있고 관리자가 아니면 점검 페이지로 강제 이동!
     if config.is_maintenance_mode and not request.user.is_staff:
         return render(request, 'reservations/maintenance.html', {'message': config.maintenance_message})
 
@@ -25,12 +25,12 @@ def reservation_page(request):
             messages.error(request, "로그인이 필요한 서비스입니다.")
             return redirect('login')
 
-        # ✨ [미비점 보완] 관리자가 아닌데, 아직 가입 승인이 안 된 유저라면 컷!
+        # [미비점 보완] 관리자가 아닌데, 아직 가입 승인이 안 된 유저라면 컷!
         if not request.user.is_staff and hasattr(request.user, 'profile') and not request.user.profile.is_approved:
             messages.error(request, "가입 승인 대기 중입니다. 관리자 승인 후 예약이 가능합니다.")
             return redirect('reservations:reservation_page')    
 
-        # ✨ 3. [예약 막아두기 모드] 켜져 있고 관리자가 아니면 예약 차단!
+        # 3. [예약 막아두기 모드] 켜져 있고 관리자가 아니면 예약 차단!
         if config.block_reservations and not request.user.is_staff:
             messages.error(request, "현재 신규 예약이 임시 중단되었습니다.")
             return redirect('reservations:reservation_page')
@@ -70,14 +70,22 @@ def reservation_page(request):
 
     # --- 기존 달력 화면(GET) 처리 로직 ---
     equipments = Equipment.objects.all()
-    notices = Notice.objects.all().order_by('-created_at')[:3] 
+    
+    # ✨ 3번 요청: 상단 고정(is_pinned)된 것을 먼저, 그다음 최신순으로 정렬
+    notices = Notice.objects.all().order_by('-is_pinned', '-created_at')[:5] 
+    
+    # ✨ 4번 요청: 관리자용 승인 대기 중인 신규 가입자 수 계산
+    pending_users_count = 0
+    if request.user.is_authenticated and request.user.is_staff:
+        # 프로필 모델에서 승인 안 된(is_approved=False) 유저 수 카운트
+        pending_users_count = UserProfile.objects.filter(is_approved=False).count()
     
     return render(request, 'reservations/calendar.html', {
         'equipments': equipments,
         'notices': notices,
-        # ✨ 4. HTML로 '예약 막힘' 상태와 '점검 중' 상태 전달 (안내 문구용)
         'block_reservations': config.block_reservations,
         'is_maintenance_mode': config.is_maintenance_mode,
+        'pending_users_count': pending_users_count, # ✨ 화면으로 전달
     })
 
 def get_reservations(request):
@@ -172,22 +180,43 @@ def cancel_reservation(request, res_id):
 
 def signup(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        affiliation = request.POST.get('affiliation') # HTML 폼에서 '소속' 데이터 가져오기
+        # 1. HTML 폼에서 입력한 데이터 가져오기
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+        affiliation = request.POST.get('affiliation')
+        advisor_id = request.POST.get('advisor_id')
 
-        if form.is_valid() and affiliation:
-            user = form.save()
-            # 회원가입 성공 시, UserProfile을 생성하여 소속 저장 (is_approved는 기본값 False 적용됨)
-            UserProfile.objects.create(user=user, affiliation=affiliation)
+        # 2. 필수 값 누락 확인
+        if not all([username, password, password_confirm, affiliation, advisor_id]):
+            messages.error(request, '모든 항목을 필수적으로 입력해주세요.')
+            return render(request, 'reservations/signup.html')
+
+        # 3. 비밀번호 일치 확인
+        if password != password_confirm:
+            messages.error(request, '비밀번호가 일치하지 않습니다.')
+            return render(request, 'reservations/signup.html')
+
+        # 4. 사용자 계정 생성 (중복 아이디 방지)
+        try:
+            user = User.objects.create_user(username=username, password=password)
+            
+            # 5. 회원가입 성공 시, UserProfile을 생성하여 소속과 교직원 번호 저장
+            UserProfile.objects.create(
+                user=user, 
+                affiliation=affiliation, 
+                advisor_id=advisor_id  # ✨ 추가된 부분
+            )
             
             messages.success(request, '회원가입이 완료되었습니다. 관리자의 승인을 기다려주세요.')
-            return redirect('login')
-        elif not affiliation:
-            messages.error(request, '소속을 반드시 입력해주세요.')
-    else:
-        form = UserCreationForm()
-        
-    return render(request, 'reservations/signup.html', {'form': form})
+            return redirect('reservations:login') # urls 설정에 따라 'login' 또는 'reservations:login'
+            
+        except IntegrityError:
+            messages.error(request, '이미 존재하는 아이디입니다. 다른 아이디를 사용해주세요.')
+            return render(request, 'reservations/signup.html')
+
+    # GET 요청 시 빈 폼 화면 렌더링
+    return render(request, 'reservations/signup.html')
 
 def report_issue(request):
     if not request.user.is_authenticated:
@@ -316,3 +345,29 @@ def custom_login_view(request):
             return render(request, 'registration/login.html')
 
     return render(request, 'registration/login.html')
+
+import random
+import string
+
+def find_password(request):
+    temp_password = None
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        advisor_id = request.POST.get('advisor_id')
+
+        try:
+            user = User.objects.get(username=username)
+            # 유저 프로필이 있고, 교직원 번호가 일치하는지 확인
+            if hasattr(user, 'profile') and user.profile.advisor_id == advisor_id:
+                # ✨ 일치함! 무작위 8자리 임시 비밀번호 생성
+                temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+                
+                # 장고 내장 함수로 비밀번호 안전하게 변경 및 저장
+                user.set_password(temp_password)
+                user.save()
+            else:
+                messages.error(request, "아이디 또는 교직원 번호가 일치하지 않습니다.")
+        except User.DoesNotExist:
+            messages.error(request, "존재하지 않는 아이디입니다.")
+
+    return render(request, 'reservations/find_password.html', {'temp_password': temp_password})

@@ -32,9 +32,16 @@
             </div>
 
             <!-- 소속 (기존 유지) -->
-            <div class="mb-4">
+            <div class="mb-3">
                 <label for="affiliation" class="form-label fw-bold" style="color: #6c757d;">소속 (학교/지도교수)</label>
-                <input type="text" class="form-control" id="affiliation" name="affiliation" required placeholder="예: 동국대학교 권순철 교수님 연구실" style="border: 2px solid #fbb812;">
+                <input type="text" class="form-control" id="affiliation" name="affiliation" required placeholder="예: 동국대학교 권순철 교수님 연구실">
+            </div>
+
+            <!-- ✨ 추가: 비밀번호 찾기용 인증 번호 -->
+            <div class="mb-4">
+                <label for="advisor_id" class="form-label fw-bold" style="color: #6c757d;">지도교수 교원 번호 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="advisor_id" name="advisor_id" required placeholder="비밀번호 찾기 시 필요합니다" style="border: 2px solid #fbb812;">
+                <div class="form-text small text-muted">※ 계정 분실 시 본인 확인 용도로 사용됩니다.</div>
             </div>
             
             <button type="submit" class="btn btn-success w-100 py-2 fw-bold" style="background-color: #ed542b; border-color: #ed542b;">가입하기</button>
