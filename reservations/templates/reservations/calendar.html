@@ -80,19 +80,22 @@
 <body>
 <div class="container-fluid px-5">
     
-    <!-- 1. 최상단 네비게이션 헤더 -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="m-0 fw-bold text-dark">
             <img src="{% static 'images/logo.png' %}" alt="NBEDL 로고" style="height: 40px; vertical-align: middle; margin-right: 10px;">
             NBEDL 장비 예약
         </h2>
         <div>
+            <!-- ✨ 매뉴얼 팝업 버튼 추가 -->
+            <button type="button" class="btn btn-outline-dark btn-sm me-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
+                📖 이용 매뉴얼
+            </button>
+
             {% if user.is_authenticated %}
                 <span class="me-3">
                     <strong>{% if user.is_staff %}⚙️ 시스템 관리자{% else %}🧑‍🔬 {{ user.username }}{% endif %}</strong>님 환영합니다!
                 </span>
                 
-                <!-- 관리자용 퀵 제어판 스위치 -->
                 {% if user.is_staff %}
                 <span class="d-inline-flex align-items-center bg-light px-3 py-1 rounded border me-3">
                     <div class="form-check form-switch me-3 mb-0">
@@ -122,7 +125,6 @@
         </div>
     </div>
 
-    <!-- ✨ 2. (위치 수정됨) 신규 가입자 승인 대기 알림 배너 -->
     {% if user.is_staff and pending_users_count > 0 %}
     <div class="alert alert-warning shadow-sm border-warning d-flex align-items-center rounded-3 p-3 mb-4" role="alert">
         <span class="fs-3 me-3">🚨</span>
@@ -134,7 +136,6 @@
     </div>
     {% endif %}
 
-    <!-- 3. 공지사항 -->
     <div class="card mb-3 border-0 shadow-sm" style="border-left: 5px solid #ed542b !important;">
         <div class="card-body bg-white rounded py-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -149,7 +150,6 @@
                 {% for notice in notices %}
                     <li class="mb-1 text-truncate">
                         <span class="badge me-2" style="background-color: #948a88;">{{ notice.created_at|date:"m-d" }}</span> 
-                        <!-- ✨ 보너스: 상단 고정된 공지는 📌 아이콘 띄우기 -->
                         {% if notice.is_pinned %}📌{% endif %}
                         <strong class="text-dark me-2">{{ notice.title }}</strong>
                         <span class="text-muted small">{{ notice.content }}</span>
@@ -286,7 +286,7 @@
           <p class="fs-6 fw-bold text-primary mb-0" id="detailEquipment"></p>
         </div>
         <div class="mb-3">
-          <label class="text-muted small fw-bold">샘플명 (점검명)</label>
+          <label class="text-muted small fw-bold">샘플명</label>
           <p class="fs-5 fw-semibold mb-0" id="detailSample"></p>
         </div>
         <div>
@@ -318,7 +318,6 @@
           eventDisplay: 'block', 
           
           dayCellDidMount: function(info) {
-            // 조건문 시작: 예약이 열려있거나, 관리자일 때만 아래 코드를 실행합니다.
             {% if not block_reservations or user.is_staff %}
                 let btn = document.createElement('div');
                 btn.className = 'add-event-btn';
@@ -328,7 +327,6 @@
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation(); 
                     
-                    // 쪼개진 날짜와 시간에 맞게 각각 값 넣어주기
                     var sDate = document.getElementById('start_date');
                     var eDate = document.getElementById('end_date');
                     var sTime = document.getElementById('start_time_select');
@@ -336,10 +334,9 @@
                     
                     if(sDate) sDate.value = info.dateStr;
                     if(eDate) eDate.value = info.dateStr;
-                    if(sTime) sTime.value = "09:00"; // 기본 시작 시간
-                    if(eTime) eTime.value = "18:00"; // 기본 종료 시간
+                    if(sTime) sTime.value = "09:00"; 
+                    if(eTime) eTime.value = "18:00"; 
                     
-                    // 값을 넣은 후, 결합 및 요금 계산 함수 실행
                     if(typeof updateHiddenAndCalculate === 'function') {
                         updateHiddenAndCalculate();
                     }
@@ -348,7 +345,6 @@
                 });
                 info.el.appendChild(btn);
             {% endif %}
-            // 조건문 끝
           },
           
           dateClick: function(info) {
@@ -407,7 +403,6 @@
         });
         calendar.render();
 
-        // 셀렉트박스 변경 시 달력 스케줄 동적 동기화
         document.getElementById('calendar-equipment-filter').addEventListener('change', function() {
             var selectedId = this.value;
             var apiUrl = '/api/reservations/';
@@ -439,20 +434,19 @@
             }
         });
     }
-    // 30분 단위 시간 선택 드롭다운 생성 (09:00 ~ 18:00)
+
     var timeSelects = [document.getElementById('start_time_select'), document.getElementById('end_time_select')];
     timeSelects.forEach(function(select) {
         if(!select) return;
-        for(let h = 9; h <= 18; h++) { // 9시부터 18시까지
+        for(let h = 9; h <= 18; h++) { 
             let hourStr = h < 10 ? '0' + h : h;
             select.add(new Option(hourStr + ':00', hourStr + ':00'));
-            if(h !== 18) { // 18시 30분은 제외
+            if(h !== 18) { 
                 select.add(new Option(hourStr + ':30', hourStr + ':30'));
             }
         }
     });
 
-    // 날짜와 시간을 합쳐서 Hidden Input에 넣고 요금 계산하는 함수
     function updateHiddenAndCalculate() {
         var sDate = document.getElementById('start_date').value;
         var sTime = document.getElementById('start_time_select').value;
@@ -462,15 +456,12 @@
         var sHidden = document.getElementById('start_time_hidden');
         var eHidden = document.getElementById('end_time_hidden');
 
-        // 서버에서 요구하는 "YYYY-MM-DDTHH:mm" 형태로 결합
         if(sDate && sTime && sHidden) sHidden.value = sDate + 'T' + sTime;
         if(eDate && eTime && eHidden) eHidden.value = eDate + 'T' + eTime;
 
-        // 요금 계산 실행 
         calculateCostForSplit(); 
     }
 
-    // 분리된 UI를 위한 새로운 요금 계산 함수
     function calculateCostForSplit() {
         var eqSelect = document.getElementById('equipment_select');
         var sHidden = document.getElementById('start_time_hidden');
@@ -496,13 +487,11 @@
         }
     }
 
-    // 변경될 때마다 결합 및 계산 함수 실행
     ['start_date', 'start_time_select', 'end_date', 'end_time_select', 'equipment_select'].forEach(function(id) {
         var elem = document.getElementById(id);
         if(elem) elem.addEventListener('change', updateHiddenAndCalculate);
     });  
     
-    // 스위치 클릭 시 서버로 상태 전송
     function toggleConfig(field, value) {
         var payload = {};
         payload[field] = value;
@@ -517,7 +506,6 @@
         }).then(response => response.json())
           .then(data => {
               if(data.success) {
-                  // 성공 시 화면 새로고침하여 바뀐 상태 적용
                   location.reload(); 
               } else {
                   alert(data.error || '오류가 발생했습니다.');
@@ -540,5 +528,58 @@
     }
   });
 </script>
+
+<!-- ✨ 일반 이용자 매뉴얼 모달창 추가 -->
+<div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header text-white" style="background-color: #343a40;">
+        <h5 class="modal-title fw-bold">📖 NBEDL 장비 예약 시스템 이용 매뉴얼</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 bg-light">
+          
+        <h6 class="fw-bold text-primary mb-2">1. 회원 가입 및 등급 👤</h6>
+        <div class="p-3 bg-white border rounded mb-4 shadow-sm">
+            <ul class="mb-0">
+                <li class="mb-2"><strong>동국대 내부 인원:</strong> 가입 시 '내부'를 선택하시면 별도 승인 없이 즉시 로그인 및 예약 신청이 가능합니다.</li>
+                <li><strong>외부 인원:</strong> 가입 후 관리자가 정보 확인 후 가입을 승인해야 로그인이 가능합니다.</li>
+            </ul>
+        </div>
+
+        <h6 class="fw-bold text-success mb-2">2. 장비 예약 및 라만 자동 승인 📅</h6>
+        <div class="p-3 bg-white border rounded mb-4 shadow-sm">
+            <ul class="mb-0">
+                <li class="mb-2">달력에서 예약할 날짜의 <strong>우측 하단 [+] 버튼</strong>을 눌러 예약 창을 엽니다.</li>
+                <li class="mb-2">원하는 시간, 샘플명, 세부 정보를 입력하고 신청합니다.</li>
+                <li class="mb-2">일반 장비 예약은 '승인 대기' 상태가 되며, 관리자 승인 후 '승인 완료(초록색)'로 변경됩니다.</li>
+                <li class="text-danger fw-bold">💡 [특례] 동국대 내부 회원이 '라만(Raman)' 장비를 예약할 경우, 관리자 확인 없이 즉시 예약이 승인됩니다!</li>
+            </ul>
+        </div>
+
+        <h6 class="fw-bold text-secondary mb-2">3. 예약 확인 및 취소 ⚙️</h6>
+        <div class="p-3 bg-white border rounded mb-4 shadow-sm">
+            <ul class="mb-0">
+                <li class="mb-2">본인의 예약 상태 및 승인 여부는 상단의 <strong>[내 예약 관리(마이페이지)]</strong>에서 모아볼 수 있습니다.</li>
+                <li>예약 취소 역시 마이페이지의 예약 내역 우측 <strong>[취소]</strong> 버튼을 통해 언제든 가능합니다.</li>
+            </ul>
+        </div>
+
+        <h6 class="fw-bold text-danger mb-2">4. 계정 관리 및 문의 사항 ⚠️</h6>
+        <div class="p-3 bg-white border rounded shadow-sm">
+            <ul class="mb-0">
+                <li class="mb-2">비밀번호 분실 시 로그인 창의 <strong>[비밀번호 찾기]</strong>에서 지도교수 교직원 번호를 입력하여 임시 비밀번호를 발급받으세요.</li>
+                <li>계정 삭제 요구나 시스템 오류 건의는 상단의 빨간색 <strong>[⚠️ 오류 신고]</strong> 메뉴를 적극 활용해 주시기 바랍니다.</li>
+            </ul>
+        </div>
+
+      </div>
+      <div class="modal-footer bg-white border-top-0 pt-0">
+        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

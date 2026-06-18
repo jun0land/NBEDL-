@@ -39,20 +39,29 @@ class IssueReport(models.Model):
     def __str__(self):
         return self.title
 
-# ✨ 4. 사용자 추가 정보 (소속 및 승인 여부) 신규 생성
+# (기존 코드 생략...)
+
+# ✨ 4. 사용자 추가 정보 (소속 및 승인 여부, 등급 추가)
 class UserProfile(models.Model):
+    USER_TYPE_CHOICES = (
+        ('INTERNAL', '내부 이용자 (동국대)'),
+        ('EXTERNAL', '외부 이용자'),
+    )
+    
     real_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="이름") 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    
+    # ✨ 추가: 내부/외부 이용자 구분
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='EXTERNAL', verbose_name="이용자 구분")
+    
     affiliation = models.CharField(max_length=100, verbose_name="소속")
     is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
-    
-    # ✨ 추가: 비밀번호 찾기용 지도교수 교원 번호
-    # 기존 가입자 데이터와의 충돌을 막기 위해 null=True, blank=True를 설정합니다.
     advisor_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="지도교수 교원 번호")
 
     def __str__(self):
         name = self.real_name if self.real_name else self.user.username
-        return f"{name} ({self.affiliation})"
+        return f"[{self.get_user_type_display()}] {name} ({self.affiliation})"
+
 
 # ✨ 5. 공지사항 모델 신규 생성
 class Notice(models.Model):

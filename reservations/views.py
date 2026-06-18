@@ -58,6 +58,14 @@ def reservation_page(request):
             messages.error(request, "해당 시간에 이 장비는 이미 예약되어 있습니다.")
             return redirect('reservations:reservation_page')
 
+        # ✨ [업데이트] 내부 이용자이면서 장비 이름에 '라만' 또는 'Raman'이 포함되어 있으면 자동 승인!
+        res_status = 'PENDING'
+        user_profile = getattr(request.user, 'profile', None)
+        
+        if user_profile and user_profile.user_type == 'INTERNAL':
+            if '라만' in equipment.name or 'raman' in equipment.name.lower():
+                res_status = 'APPROVED'
+
         Reservation.objects.create(
             equipment=equipment,
             user=request.user,
@@ -66,9 +74,15 @@ def reservation_page(request):
             end_time=end_time,
             sample_name=request.POST.get('sample_name'),
             sample_details=request.POST.get('sample_details'),
-            attached_file=request.FILES.get('attached_file')
+            attached_file=request.FILES.get('attached_file'),
+            status=res_status # 계산된 상태값 반영
         )
-        messages.success(request, f"[{equipment.name}] 예약 신청이 완료되었습니다!")
+        
+        if res_status == 'APPROVED':
+            messages.success(request, f"[{equipment.name}] 예약이 즉시 승인되었습니다! (내부 이용자 혜택)")
+        else:
+            messages.success(request, f"[{equipment.name}] 예약 신청이 완료되었습니다! (관리자 승인 대기)")
+            
         return redirect('reservations:reservation_page')
 
     equipments = Equipment.objects.all()
@@ -96,7 +110,6 @@ def get_reservations(request):
         reservations = reservations.filter(equipment_id=equipment_id)
         
     for res in reservations:
-        # ✨ 달력에 이름과 소속 표시
         user_name = res.user.profile.real_name if hasattr(res.user, 'profile') and res.user.profile.real_name else res.user.username
         title_text = f"[{res.equipment.name}] {user_name} ({res.affiliation})"
         
@@ -111,7 +124,6 @@ def get_reservations(request):
             'sample_details': res.sample_details,
         })
         
-    # ✨ 장비 점검 일정 가져와서 달력에 빨간색으로 추가
     maintenances = EquipmentMaintenance.objects.all()
     if equipment_id:
         maintenances = maintenances.filter(equipment_id=equipment_id)
@@ -130,18 +142,13 @@ def get_reservations(request):
     return JsonResponse(events, safe=False)
 
 # ==========================================
-# 3. 예약 취소 뷰 (노쇼 방지 로직)
+# 3. 예약 취소 뷰 (취소 시간 제한 없음)
 # ==========================================
 def cancel_reservation(request, res_id):
     if request.method == 'POST':
         res = get_object_or_404(Reservation, id=res_id)
         
         if request.user.is_staff or res.user == request.user:
-            # ✨ 24시간 이내 취소 방지 로직
-            if not request.user.is_staff and not res.can_cancel:
-                messages.error(request, "사용 시작 24시간 이내에는 직접 취소하실 수 없습니다. 관리자에게 문의해 주세요.")
-                return redirect('reservations:mypage')
-                
             res.delete()
             messages.success(request, "예약이 취소되었습니다.")
         else:
@@ -149,18 +156,19 @@ def cancel_reservation(request, res_id):
     return redirect('reservations:mypage')
 
 # ==========================================
-# 4. 회원가입 뷰 (이름 저장 추가)
+# 4. 회원가입 뷰 (내부 이용자 자동 승인)
 # ==========================================
 def signup(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
-        real_name = request.POST.get('real_name') # ✨ 이름 추가
+        real_name = request.POST.get('real_name')
+        user_type = request.POST.get('user_type') # ✨ 추가: 내부/외부 구분
         affiliation = request.POST.get('affiliation')
         advisor_id = request.POST.get('advisor_id')
 
-        if not all([username, password, password_confirm, real_name, affiliation, advisor_id]):
+        if not all([username, password, password_confirm, real_name, user_type, affiliation, advisor_id]):
             messages.error(request, '모든 항목을 필수적으로 입력해주세요.')
             return render(request, 'reservations/signup.html')
 
@@ -170,13 +178,24 @@ def signup(request):
 
         try:
             user = User.objects.create_user(username=username, password=password)
+            
+            # ✨ 내부 이용자(동국대)면 즉시 승인 처리
+            is_approved = True if user_type == 'INTERNAL' else False
+            
             UserProfile.objects.create(
                 user=user, 
                 real_name=real_name, 
+                user_type=user_type, 
                 affiliation=affiliation, 
-                advisor_id=advisor_id
+                advisor_id=advisor_id, 
+                is_approved=is_approved
             )
-            messages.success(request, '회원가입이 완료되었습니다. 관리자의 승인을 기다려주세요.')
+            
+            if is_approved:
+                messages.success(request, '회원가입이 완료되었습니다! 동국대 내부 이용자로 즉시 승인되었습니다. 로그인해주세요.')
+            else:
+                messages.success(request, '회원가입이 완료되었습니다. 외부 이용자는 관리자의 승인을 기다려주세요.')
+                
             return redirect('reservations:login')
         except IntegrityError:
             messages.error(request, '이미 존재하는 아이디입니다.')
@@ -192,11 +211,11 @@ def export_settlement_csv(request):
         messages.error(request, "관리자만 접근 가능합니다.")
         return redirect('reservations:mypage')
         
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig') # 한글 깨짐 방지 BOM
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="nbedl_settlement_data.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['예약 상태', '장비명', '예약자 계정', '예약자 실명', '소속', '지도교수 번호', '시작 일시', '종료 일시', '이용 시간(h)', '시간당 요금', '예상 청구금액(원)'])
+    writer.writerow(['예약 상태', '장비명', '예약자 계정', '예약자 실명', '이용자 구분', '소속', '지도교수 번호', '시작 일시', '종료 일시', '이용 시간(h)', '시간당 요금', '예상 청구금액(원)'])
     
     reservations = Reservation.objects.all().order_by('-start_time')
     
@@ -205,6 +224,7 @@ def export_settlement_csv(request):
         cost = round(diff_hours * res.equipment.hourly_rate)
         
         real_name = res.user.profile.real_name if hasattr(res.user, 'profile') and res.user.profile.real_name else "-"
+        user_type = res.user.profile.get_user_type_display() if hasattr(res.user, 'profile') and res.user.profile.user_type else "-"
         advisor_id = res.user.profile.advisor_id if hasattr(res.user, 'profile') and res.user.profile.advisor_id else "-"
         
         writer.writerow([
@@ -212,6 +232,7 @@ def export_settlement_csv(request):
             res.equipment.name,
             res.user.username,
             real_name,
+            user_type,
             res.affiliation,
             advisor_id,
             res.start_time.strftime('%Y-%m-%d %H:%M'),
@@ -224,7 +245,7 @@ def export_settlement_csv(request):
     return response
 
 # ==========================================
-# (아래는 기존의 나머지 로직들 유지)
+# (나머지 로직 유지)
 # ==========================================
 def mypage(request):
     if not request.user.is_authenticated:
