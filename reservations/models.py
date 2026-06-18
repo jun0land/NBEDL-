@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 # ✨ 1. 기존 '장비' 테이블에 '시간당 요금'을 하나로 합쳤습니다.
 class Equipment(models.Model):
@@ -39,6 +41,7 @@ class IssueReport(models.Model):
 
 # ✨ 4. 사용자 추가 정보 (소속 및 승인 여부) 신규 생성
 class UserProfile(models.Model):
+    real_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="이름") 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     affiliation = models.CharField(max_length=100, verbose_name="소속")
     is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
@@ -48,7 +51,8 @@ class UserProfile(models.Model):
     advisor_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="지도교수 교원 번호")
 
     def __str__(self):
-        return f"{self.user.username} ({self.affiliation})"
+        name = self.real_name if self.real_name else self.user.username
+        return f"{name} ({self.affiliation})"
 
 # ✨ 5. 공지사항 모델 신규 생성
 class Notice(models.Model):
@@ -75,3 +79,13 @@ class SystemConfig(models.Model):
 
     def __str__(self):
         return "시스템 글로벌 제어판"
+
+# ✨ [업데이트 2번] 개별 장비 점검/고장 관리 모델 추가
+class EquipmentMaintenance(models.Model):
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, verbose_name="장비")
+    start_time = models.DateTimeField(verbose_name="점검 시작 일시")
+    end_time = models.DateTimeField(verbose_name="점검 종료 일시")
+    reason = models.CharField(max_length=200, verbose_name="점검 사유", default="정기 점검 및 수리")
+
+    def __str__(self):
+        return f"[{self.equipment.name}] 점검 ({self.start_time.strftime('%m/%d')}~{self.end_time.strftime('%m/%d')})"

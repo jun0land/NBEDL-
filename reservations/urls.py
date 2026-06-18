@@ -30,4 +30,6 @@ urlpatterns = [
     path('toggle-config/', views.toggle_system_config, name='toggle_config'),
 
     path('find_password/', views.find_password, name='find_password'),
+
+    path('export-csv/', views.export_settlement_csv, name='export_csv'),
 ]

@@ -201,7 +201,8 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold">{% if user.is_staff %}장비 예약 및 점검 신청{% else %}장비 예약 신청{% endif %}</h5>
+        <!-- ✨ 예약 모달창 헤더 통일 -->
+        <h5 class="modal-title fw-bold">장비 예약 신청</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -247,7 +248,7 @@
             <input type="text" class="form-control" name="affiliation" value="{% if user.is_staff %}시스템 관리자{% endif %}" placeholder="예: 동국대학교 연구실" required>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold">{% if user.is_staff %}샘플명 (또는 점검명){% else %}샘플명{% endif %}</label>
+            <label class="form-label fw-semibold">샘플명</label>
             <input type="text" class="form-control" name="sample_name" placeholder="예: Si" required>
           </div>
           <div class="mb-3">

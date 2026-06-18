@@ -73,6 +73,12 @@
                 <div class="card-footer bg-light small text-muted text-center py-2 border-top-0">
                     새 탭에서 관리 창이 열립니다.
                 </div>
+                <!-- ✨ 엑셀 다운로드 버튼 추가 -->
+                <div class="p-3 bg-light border-top">
+                    <a href="{% url 'reservations:export_csv' %}" class="btn btn-dark w-100 fw-bold shadow-sm py-2">
+                        📊 엑셀(CSV) 다운로드
+                    </a>
+                </div>
             </div>
         </div>
         {% endif %}

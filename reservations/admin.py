@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Equipment, Reservation, IssueReport, UserProfile, Notice
+from .models import Equipment, Reservation, IssueReport, UserProfile, Notice, SystemConfig, EquipmentMaintenance
 
 # ✨ 장비 목록에서 시간당 금액을 바로 수정할 수 있게 세팅
 @admin.register(Equipment)
@@ -88,3 +88,5 @@ def custom_get_app_list(self, request, app_label=None):
 
 # 장고의 기본 AdminSite의 메뉴 리스트 불러오는 함수를 우리가 만든 함수로 덮어쓰기 (Monkey Patching)
 admin.AdminSite.get_app_list = custom_get_app_list
+
+admin.site.register(EquipmentMaintenance)
