@@ -1,11 +1,11 @@
 from django.contrib import admin
 from .models import Equipment, Reservation, IssueReport, UserProfile, Notice, SystemConfig, EquipmentMaintenance
 
-# ✨ 1. 장비 목록 관리 (시간당 금액 바로 수정)
+# ✨ 1. 장비 목록 관리 (내부/외부 요금 분리)
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ['name', 'hourly_rate']
-    list_editable = ['hourly_rate']
+    list_display = ['name', 'internal_hourly_rate', 'external_hourly_rate']
+    list_editable = ['internal_hourly_rate', 'external_hourly_rate']
     search_fields = ['name']
 
 # 📅 2. 예약 관리

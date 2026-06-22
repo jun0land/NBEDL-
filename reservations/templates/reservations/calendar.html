@@ -80,7 +80,6 @@
 <body>
 <div class="container-fluid px-5">
     
-    <!-- ✨ 상단 간격 및 줄바꿈 최적화 (flex-wrap) -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <h2 class="m-0 fw-bold text-dark text-nowrap">
             <img src="{% static 'images/logo.png' %}" alt="NBEDL 로고" style="height: 40px; vertical-align: middle; margin-right: 10px;">
@@ -153,7 +152,6 @@
                         <span class="badge me-2" style="background-color: #948a88;">{{ notice.created_at|date:"m-d" }}</span> 
                         {% if notice.is_pinned %}📌{% endif %}
                         
-                        <!-- ✨ 공지사항 제목 클릭 시 상세 모달창 띄우기 -->
                         <a href="#" class="text-dark fw-bold me-2 text-decoration-none" data-bs-toggle="modal" data-bs-target="#noticeModal{{ notice.id }}">
                             {{ notice.title }}
                         </a>
@@ -215,9 +213,12 @@
           <div class="mb-3">
             <label class="form-label fw-semibold text-primary" style="color: #ed542b !important;">예약할 장비 선택</label>
             <select class="form-select border-primary" id="equipment_select" name="equipment" style="border-color: #fbb812 !important;" required>
-                <option value="" selected disabled data-rate="0">사용하실 장비를 선택해 주세요</option>
+                <option value="" selected disabled>사용하실 장비를 선택해 주세요</option>
                 {% for eq in equipments %}
-                    <option value="{{ eq.id }}" data-rate="{{ eq.hourly_rate|default:0 }}">{{ eq.name }} (시간당 {{ eq.hourly_rate|default:0 }}원)</option>
+                    <!-- ✨ 내/외부 요금을 옵션의 data 속성으로 숨겨둡니다 -->
+                    <option value="{{ eq.id }}" data-internal-rate="{{ eq.internal_hourly_rate|default:0 }}" data-external-rate="{{ eq.external_hourly_rate|default:0 }}">
+                        {{ eq.name }} (내부: {{ eq.internal_hourly_rate }}원 / 외부: {{ eq.external_hourly_rate }}원)
+                    </option>
                 {% endfor %}
             </select>
           </div>
@@ -243,13 +244,16 @@
           
           <div class="mb-3 p-3 rounded" style="background-color: #fcf8f2; border: 2px dashed #fbb812;">
               <div class="d-flex justify-content-between align-items-center">
-                  <span class="fw-bold" style="color: #948a88;">💰 예상 청구 금액</span>
+                  <div>
+                      <span class="fw-bold" style="color: #948a88;">💰 예상 청구 금액</span>
+                      <small class="d-block text-success fw-bold mt-1" id="discount_badge" style="display: none !important;">✨ 직접 사용 할인 30% 적용!</small>
+                  </div>
                   <h4 class="mb-0 fw-bold" id="expected_cost" style="color: #ed542b;">0 원</h4>
               </div>
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold">예약자 소속</label>
-            <input type="text" class="form-control" name="affiliation" value="{% if user.is_staff %}시스템 관리자{% endif %}" placeholder="예: 동국대학교 연구실" required>
+            <input type="text" class="form-control" name="affiliation" value="{% if user.is_staff %}시스템 관리자{% elif user.is_authenticated %}{{ user.profile.affiliation }}{% endif %}" placeholder="예: 동국대학교 연구실" required>
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold">샘플명</label>
@@ -308,6 +312,16 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+  // ✨ 사용자 정보 자바스크립트로 가져오기 (할인 계산용)
+  var isInternalUser = {% if user.is_authenticated and user.profile.user_type == 'INTERNAL' %}true{% else %}false{% endif %};
+  var certifiedEquipments = [
+      {% if user.is_authenticated and user.profile %}
+          {% for eq in user.profile.certified_equipment.all %}
+              {{ eq.id }},
+          {% endfor %}
+      {% endif %}
+  ];
+
   document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     if (calendarEl) {
@@ -466,28 +480,50 @@
         calculateCostForSplit(); 
     }
 
+    // ✨ 할인 및 차등 요금을 실시간으로 프론트에서 계산하는 로직
     function calculateCostForSplit() {
         var eqSelect = document.getElementById('equipment_select');
         var sHidden = document.getElementById('start_time_hidden');
         var eHidden = document.getElementById('end_time_hidden');
         var costDisplay = document.getElementById('expected_cost');
+        var discountBadge = document.getElementById('discount_badge');
 
         if (!eqSelect || eqSelect.selectedIndex <= 0 || !sHidden.value || !eHidden.value) {
             costDisplay.innerText = "0 원";
+            discountBadge.style.setProperty('display', 'none', 'important');
             return;
         }
 
-        var hourlyRate = parseInt(eqSelect.options[eqSelect.selectedIndex].getAttribute('data-rate')) || 0;
+        var selectedOption = eqSelect.options[eqSelect.selectedIndex];
+        var internalRate = parseInt(selectedOption.getAttribute('data-internal-rate')) || 0;
+        var externalRate = parseInt(selectedOption.getAttribute('data-external-rate')) || 0;
+        
+        // 내 소속에 따라 기본 요금 결정
+        var baseRate = isInternalUser ? internalRate : externalRate;
+
+        // 선택한 장비의 ID 확인 후 할인율 결정 (권한 있으면 30% 할인 = 0.7 곱하기)
+        var eqId = parseInt(selectedOption.value);
+        var isCertified = certifiedEquipments.includes(eqId);
+        var finalRate = isCertified ? baseRate * 0.7 : baseRate;
+
         var startTime = new Date(sHidden.value);
         var endTime = new Date(eHidden.value);
 
         if (endTime > startTime) {
             var diffMs = endTime - startTime; 
             var diffHours = diffMs / (1000 * 60 * 60);
-            var totalCost = Math.round(diffHours * hourlyRate);
+            var totalCost = Math.round(diffHours * finalRate);
+            
             costDisplay.innerText = totalCost.toLocaleString() + " 원";
+            
+            if (isCertified) {
+                discountBadge.style.setProperty('display', 'block', 'important');
+            } else {
+                discountBadge.style.setProperty('display', 'none', 'important');
+            }
         } else {
             costDisplay.innerText = "0 원";
+            discountBadge.style.setProperty('display', 'none', 'important');
         }
     }
 
@@ -546,22 +582,28 @@
         <h6 class="fw-bold text-primary mb-2">1. 회원 가입 및 등급 👤</h6>
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
-                <li class="mb-2"><strong>동국대 내부 인원:</strong> 가입 시 '내부'를 선택하시면 별도 승인 없이 즉시 로그인 및 예약 신청이 가능합니다.</li>
-                <li><strong>외부 인원:</strong> 가입 후 관리자가 정보 확인 후 가입을 승인해야 로그인이 가능합니다.</li>
+                <li class="mb-2"><strong>내부 이용자(동국대):</strong> 별도 승인 없이 즉시 가입 및 예약 신청이 가능합니다.</li>
+                <li><strong>외부 이용자(타 기관/기업):</strong> 가입 후 관리자의 승인 절차가 완료되어야 로그인이 가능합니다.</li>
             </ul>
         </div>
 
-        <h6 class="fw-bold text-success mb-2">2. 장비 예약 및 사용 📅</h6>
+        <h6 class="fw-bold text-success mb-2">2. 장비 예약 및 직접 사용 권한 📅</h6>
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
-                <li class="mb-2">달력에서 예약할 날짜의 <strong>우측 하단 [+] 버튼</strong>을 눌러 예약 창을 엽니다.</li>
-                <li class="mb-2">원하는 시간, 샘플명, 세부 정보를 입력하고 신청합니다.</li>
-                <li class="mb-2">모든 장비 예약은 기본적으로 '승인 대기' 상태가 되며, 관리자 승인 후 완료됩니다.</li>
-                <li class="text-danger fw-bold">💡 [특례] 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에서 이를 확인할 수 있으며 해당 장비는 관리자 보조 없이 독립적으로 사용할 수 있습니다.</li>
+                <li class="mb-2"><strong>예약 방법:</strong> 달력 우측 하단의 <strong>[+] 버튼</strong>을 눌러 시간과 샘플 정보를 입력하여 신청합니다. (모든 일반 예약은 '승인 대기' 상태로 시작됩니다.)</li>
+                <li class="text-danger fw-bold">💡 [특례] 직접 사용 권한: 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에 ✅ 뱃지가 표시되며, 해당 장비는 관리자 보조 없이 독립적으로 사용할 수 있습니다.</li>
             </ul>
         </div>
 
-        <h6 class="fw-bold text-secondary mb-2">3. 예약 확인 및 취소 ⚙️</h6>
+        <h6 class="fw-bold text-warning mb-2" style="color: #ed542b !important;">3. 이용 요금 및 정산 💰</h6>
+        <div class="p-3 bg-white border rounded mb-4 shadow-sm">
+            <ul class="mb-0">
+                <li class="mb-2"><strong>요금 차등 적용:</strong> 소속(내부/외부)에 따라 장비 이용 요금이 다르게 책정되어 청구됩니다. (예약 창에서 소속에 맞는 요금이 자동 적용됨)</li>
+                <li><strong class="text-success">✨ 할인 혜택:</strong> '직접 사용 권한'을 보유한 사용자가 해당 장비를 직접 운용할 경우, <strong>이용료의 30%가 자동 할인</strong>되어 청구됩니다.</li>
+            </ul>
+        </div>
+
+        <h6 class="fw-bold text-secondary mb-2">4. 예약 확인 및 취소 ⚙️</h6>
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2">본인의 예약 상태 및 승인 여부는 상단의 <strong>[내 예약 관리(마이페이지)]</strong>에서 모아볼 수 있습니다.</li>
@@ -569,7 +611,7 @@
             </ul>
         </div>
 
-        <h6 class="fw-bold text-danger mb-2">4. 계정 관리 및 문의 사항 ⚠️</h6>
+        <h6 class="fw-bold text-danger mb-2">5. 계정 관리 및 문의 사항 ⚠️</h6>
         <div class="p-3 bg-white border rounded shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2">비밀번호 분실 시 로그인 창의 <strong>[비밀번호 찾기]</strong>에서 개인 학번/사번을 입력하여 임시 비밀번호를 발급받으세요.</li>

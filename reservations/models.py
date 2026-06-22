@@ -3,11 +3,12 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 
-# ✨ 1. 기존 '장비' 테이블에 '시간당 요금'을 하나로 합쳤습니다.
+# ✨ 1. 기존 '장비' 테이블에 '시간당 요금'을 내/외부로 분리
 class Equipment(models.Model):
     name = models.CharField(max_length=100) # 예: 스핀 코터, Sputter System
     description = models.TextField(blank=True) # 장비 설명이나 위치
-    hourly_rate = models.IntegerField(default=0, verbose_name="시간당 이용 금액(원)") # 추가된 부분!
+    internal_hourly_rate = models.IntegerField(default=0, verbose_name="내부 시간당 요금(원)") # ✨ 변경
+    external_hourly_rate = models.IntegerField(default=0, verbose_name="외부 시간당 요금(원)") # ✨ 추가
 
     def __str__(self):
         return self.name
@@ -39,8 +40,6 @@ class IssueReport(models.Model):
     def __str__(self):
         return self.title
 
-# (기존 코드 생략...)
-
 # ✨ 4. 사용자 추가 정보 (소속 및 승인 여부, 등급 추가)
 class UserProfile(models.Model):
     USER_TYPE_CHOICES = (
@@ -60,7 +59,7 @@ class UserProfile(models.Model):
     # ✨ 교직원 번호 -> 학번/사번으로 변경
     student_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="개인 학번/사번")
     
-    # ✨ 직접 사용 가능 장비 권한 (다대다 관계)
+    # ✨ 직접 사용 가능 장비 권한 (다대다 관계) -> 들여쓰기 교정 완료!
     certified_equipment = models.ManyToManyField('Equipment', blank=True, verbose_name="직접 사용 가능 장비")
 
     def __str__(self):
@@ -74,7 +73,7 @@ class Notice(models.Model):
     is_pinned = models.BooleanField(default=False, verbose_name='📌 상단 고정')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self): # -> 콜론(:) 누락 교정 완료!
         return self.title
 
 class SystemConfig(models.Model):
