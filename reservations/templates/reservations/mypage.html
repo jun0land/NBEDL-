@@ -71,7 +71,7 @@
                     새 탭에서 관리 창이 열립니다.
                 </div>
                 
-                <!-- ✨ 엑셀 다운로드 버튼 추가 -->
+                <!-- 엑셀 다운로드 버튼 -->
                 <div class="p-3 bg-light border-top">
                     <a href="{% url 'reservations:export_csv' %}" class="btn btn-dark w-100 fw-bold shadow-sm py-2">
                         📊 엑셀(CSV) 다운로드
@@ -81,8 +81,30 @@
         </div>
         {% endif %}
 
-        <!-- 오른쪽: 예약 내역 테이블 -->
+        <!-- 오른쪽: 데이터 테이블 및 권한 내역 -->
         <div class="{% if user.is_staff %}col-xl-9 col-lg-8{% else %}col-12{% endif %} mb-4">
+            
+            <!-- ✨ 사용자 본인의 직접 사용 승인 장비 표시 영역 (일반 유저에게만 보임) -->
+            {% if not user.is_staff %}
+            <div class="card shadow-sm mb-4 border-0" style="border-left: 5px solid #198754 !important;">
+                <div class="card-body bg-white rounded p-3">
+                    <h6 class="fw-bold text-success mb-2 d-flex align-items-center">
+                        <span class="fs-5 me-2">✅</span>나의 직접 사용 권한 획득 장비
+                    </h6>
+                    {% if certified_equipments %}
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                        {% for eq in certified_equipments %}
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 fs-6 rounded-pill shadow-sm">{{ eq.name }}</span>
+                        {% endfor %}
+                        </div>
+                        <p class="text-muted small mb-0 mt-3">※ 위 장비들은 예약 승인 후 관리자 지원 없이 독립적인 사용이 가능합니다.</p>
+                    {% else %}
+                        <p class="text-muted small mb-0 mt-2">현재 직접 사용이 승인된 장비가 없습니다. 예약 후 관리자 지원을 받아주세요.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card shadow-sm">
                 {% if user.is_staff %}
                 <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -162,7 +184,7 @@
                                             </form>
                                         {% endif %}
                                         
-                                        <!-- ✨ 24시간 제한 삭제! 언제든 취소 가능하게 기존 폼으로 원상복구 -->
+                                        <!-- 기존의 언제든 취소 가능 폼 -->
                                         <form method="POST" action="{% url 'reservations:cancel_reservation' res.id %}" class="m-0">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-danger btn-sm py-1 text-nowrap" onclick="return confirm('취소하시겠습니까?');">취소</button>
@@ -180,7 +202,7 @@
                 </div>
             </div>
         </div>
-    </div> <!-- row 끝 -->
+    </div>
 
     {% if not user.is_staff %}
     <div class="mt-4 mb-4 pt-4 border-top text-center">
@@ -190,7 +212,7 @@
     </div>
     {% endif %}
 
-</div> <!-- container-fluid 끝 -->
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -80,24 +80,25 @@
 <body>
 <div class="container-fluid px-5">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="m-0 fw-bold text-dark">
+    <!-- ✨ 상단 간격 및 줄바꿈 최적화 (flex-wrap) -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <h2 class="m-0 fw-bold text-dark text-nowrap">
             <img src="{% static 'images/logo.png' %}" alt="NBEDL 로고" style="height: 40px; vertical-align: middle; margin-right: 10px;">
             NBEDL 장비 예약
         </h2>
-        <div>
-            <!-- ✨ 매뉴얼 팝업 버튼 추가 -->
-            <button type="button" class="btn btn-outline-dark btn-sm me-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
+        
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-dark btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
                 📖 이용 매뉴얼
             </button>
-
+            
             {% if user.is_authenticated %}
-                <span class="me-3">
+                <span>
                     <strong>{% if user.is_staff %}⚙️ 시스템 관리자{% else %}🧑‍🔬 {{ user.username }}{% endif %}</strong>님 환영합니다!
                 </span>
                 
                 {% if user.is_staff %}
-                <span class="d-inline-flex align-items-center bg-light px-3 py-1 rounded border me-3">
+                <span class="d-inline-flex align-items-center bg-light px-3 py-1 rounded border">
                     <div class="form-check form-switch me-3 mb-0">
                         <input class="form-check-input" type="checkbox" id="toggle_maintenance" {% if is_maintenance_mode %}checked{% endif %} style="cursor: pointer;">
                         <label class="form-check-label fw-bold small text-danger" for="toggle_maintenance" style="cursor: pointer;">전체 차단</label>
@@ -110,11 +111,11 @@
                 {% endif %}
 
                 {% if user.is_staff %}
-                    <a href="{% url 'reservations:settlement' %}" class="btn btn-warning btn-sm me-2" style="color: #fff; font-weight: bold;">📊 정산 보기</a>
+                    <a href="{% url 'reservations:settlement' %}" class="btn btn-warning btn-sm text-white fw-bold">📊 정산 보기</a>
                 {% endif %}
-                <a href="{% url 'reservations:mypage' %}" class="btn btn-outline-info btn-sm me-2">{% if user.is_staff %}⚙️ 전체 예약 관리{% else %}내 예약 관리{% endif %}</a>
-                <a href="{% url 'reservations:report_issue' %}" class="btn btn-danger btn-sm me-2">⚠️ 오류 신고</a>
-                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                <a href="{% url 'reservations:mypage' %}" class="btn btn-outline-info btn-sm">{% if user.is_staff %}⚙️ 전체 예약 관리{% else %}내 예약 관리{% endif %}</a>
+                <a href="{% url 'reservations:report_issue' %}" class="btn btn-danger btn-sm">⚠️ 오류 신고</a>
+                <form method="post" action="{% url 'logout' %}" class="d-inline m-0">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger btn-sm">로그아웃</button>
                 </form>
@@ -151,7 +152,11 @@
                     <li class="mb-1 text-truncate">
                         <span class="badge me-2" style="background-color: #948a88;">{{ notice.created_at|date:"m-d" }}</span> 
                         {% if notice.is_pinned %}📌{% endif %}
-                        <strong class="text-dark me-2">{{ notice.title }}</strong>
+                        
+                        <!-- ✨ 공지사항 제목 클릭 시 상세 모달창 띄우기 -->
+                        <a href="#" class="text-dark fw-bold me-2 text-decoration-none" data-bs-toggle="modal" data-bs-target="#noticeModal{{ notice.id }}">
+                            {{ notice.title }}
+                        </a>
                         <span class="text-muted small">{{ notice.content }}</span>
                     </li>
                 {% endfor %}
@@ -201,7 +206,6 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <!-- ✨ 예약 모달창 헤더 통일 -->
         <h5 class="modal-title fw-bold">장비 예약 신청</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
@@ -529,7 +533,7 @@
   });
 </script>
 
-<!-- ✨ 일반 이용자 매뉴얼 모달창 추가 -->
+<!-- 일반 이용자 매뉴얼 모달창 -->
 <div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content border-0 shadow">
@@ -547,13 +551,13 @@
             </ul>
         </div>
 
-        <h6 class="fw-bold text-success mb-2">2. 장비 예약 및 라만 자동 승인 📅</h6>
+        <h6 class="fw-bold text-success mb-2">2. 장비 예약 및 사용 📅</h6>
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2">달력에서 예약할 날짜의 <strong>우측 하단 [+] 버튼</strong>을 눌러 예약 창을 엽니다.</li>
                 <li class="mb-2">원하는 시간, 샘플명, 세부 정보를 입력하고 신청합니다.</li>
-                <li class="mb-2">일반 장비 예약은 '승인 대기' 상태가 되며, 관리자 승인 후 '승인 완료(초록색)'로 변경됩니다.</li>
-                <li class="text-danger fw-bold">💡 [특례] 동국대 내부 회원이 '라만(Raman)' 장비를 예약할 경우, 관리자 확인 없이 즉시 예약이 승인됩니다!</li>
+                <li class="mb-2">모든 장비 예약은 기본적으로 '승인 대기' 상태가 되며, 관리자 승인 후 완료됩니다.</li>
+                <li class="text-danger fw-bold">💡 [특례] 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에서 이를 확인할 수 있으며 해당 장비는 관리자 보조 없이 독립적으로 사용할 수 있습니다.</li>
             </ul>
         </div>
 
@@ -568,7 +572,7 @@
         <h6 class="fw-bold text-danger mb-2">4. 계정 관리 및 문의 사항 ⚠️</h6>
         <div class="p-3 bg-white border rounded shadow-sm">
             <ul class="mb-0">
-                <li class="mb-2">비밀번호 분실 시 로그인 창의 <strong>[비밀번호 찾기]</strong>에서 지도교수 교직원 번호를 입력하여 임시 비밀번호를 발급받으세요.</li>
+                <li class="mb-2">비밀번호 분실 시 로그인 창의 <strong>[비밀번호 찾기]</strong>에서 개인 학번/사번을 입력하여 임시 비밀번호를 발급받으세요.</li>
                 <li>계정 삭제 요구나 시스템 오류 건의는 상단의 빨간색 <strong>[⚠️ 오류 신고]</strong> 메뉴를 적극 활용해 주시기 바랍니다.</li>
             </ul>
         </div>
@@ -580,6 +584,29 @@
     </div>
   </div>
 </div>
+
+<!-- ✨ 공지사항 상세 모달창들 (반복문) -->
+{% for notice in notices %}
+<div class="modal fade" id="noticeModal{{ notice.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light border-bottom">
+        <h5 class="modal-title fw-bold text-dark">
+            {% if notice.is_pinned %}📌{% endif %} {{ notice.title }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-muted small mb-3 border-bottom pb-2">작성일: {{ notice.created_at|date:"Y-m-d H:i" }}</div>
+        <div style="white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem;" class="text-dark">{{ notice.content }}</div>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 </body>
 </html>

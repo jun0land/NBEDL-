@@ -51,17 +51,21 @@ class UserProfile(models.Model):
     real_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="이름") 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
-    # ✨ 추가: 내부/외부 이용자 구분
+    # 내부/외부 이용자 구분
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='EXTERNAL', verbose_name="이용자 구분")
     
     affiliation = models.CharField(max_length=100, verbose_name="소속")
     is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
-    advisor_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="지도교수 교원 번호")
+    
+    # ✨ 교직원 번호 -> 학번/사번으로 변경
+    student_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="개인 학번/사번")
+    
+    # ✨ 직접 사용 가능 장비 권한 (다대다 관계)
+    certified_equipment = models.ManyToManyField('Equipment', blank=True, verbose_name="직접 사용 가능 장비")
 
     def __str__(self):
         name = self.real_name if self.real_name else self.user.username
         return f"[{self.get_user_type_display()}] {name} ({self.affiliation})"
-
 
 # ✨ 5. 공지사항 모델 신규 생성
 class Notice(models.Model):

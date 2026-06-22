@@ -9,6 +9,15 @@
 <div class="container mt-5 mb-5" style="max-width: 500px;">
     <div class="card shadow-sm p-4 border-0">
         <h2 class="text-center mb-4 fw-bold" style="color: #ed542b;">회원가입</h2>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-danger py-2 text-center" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         <form method="POST">
             {% csrf_token %}
             
@@ -17,13 +26,12 @@
                 <input type="text" class="form-control" id="username" name="username" required placeholder="영문, 숫자 포함 4자 이상" autofocus>
             </div>
             
-            <!-- ✨ 이름(실명) 추가 -->
             <div class="mb-3">
                 <label for="real_name" class="form-label fw-bold">이름 (실명)</label>
                 <input type="text" class="form-control" id="real_name" name="real_name" required placeholder="예: 홍길동">
             </div>
 
-            <!-- ✨ 내부/외부 이용자 구분 라디오 버튼 추가 -->
+            <!-- 내부/외부 이용자 구분 라디오 버튼 -->
             <div class="mb-3 p-3 bg-light border rounded">
                 <label class="form-label fw-bold d-block text-dark">이용자 소속 구분</label>
                 <div class="form-check form-check-inline mt-1">
@@ -52,10 +60,11 @@
                 <input type="text" class="form-control" id="affiliation" name="affiliation" required placeholder="예: 권순철 교수님 연구실">
             </div>
 
+            <!-- ✨ 지도교수 교직원 번호 -> 학번/사번으로 변경 -->
             <div class="mb-4">
-                <label for="advisor_id" class="form-label fw-bold" style="color: #6c757d;">지도교수 교직원 번호 <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="advisor_id" name="advisor_id" required placeholder="비밀번호 찾기 시 필요합니다" style="border: 2px solid #fbb812;">
-                <div class="form-text small text-muted">※ 외부 이용자의 경우 관리자 문의 후 부여받은 코드를 입력해주세요.</div>
+                <label for="student_id" class="form-label fw-bold" style="color: #6c757d;">개인 학번/사번 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="student_id" name="student_id" required placeholder="비밀번호 찾기 시 필요합니다" style="border: 2px solid #fbb812;">
+                <div class="form-text small text-muted">※ 외부 이용자의 경우 관리자 문의 후 부여받은 사번이나 코드를 입력해주세요.</div>
             </div>
             
             <button type="submit" class="btn btn-success w-100 py-2 fw-bold" style="background-color: #ed542b; border-color: #ed542b;">가입하기</button>

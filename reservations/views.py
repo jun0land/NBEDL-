@@ -58,13 +58,8 @@ def reservation_page(request):
             messages.error(request, "해당 시간에 이 장비는 이미 예약되어 있습니다.")
             return redirect('reservations:reservation_page')
 
-        # ✨ [업데이트] 내부 이용자이면서 장비 이름에 '라만' 또는 'Raman'이 포함되어 있으면 자동 승인!
-        res_status = 'PENDING'
-        user_profile = getattr(request.user, 'profile', None)
-        
-        if user_profile and user_profile.user_type == 'INTERNAL':
-            if '라만' in equipment.name or 'raman' in equipment.name.lower():
-                res_status = 'APPROVED'
+        # ✨ [수정] 내/외부 상관없이 모두 대기. 단, 관리자(staff) 본인의 예약은 즉시 승인!
+        res_status = 'APPROVED' if request.user.is_staff else 'PENDING'
 
         Reservation.objects.create(
             equipment=equipment,
@@ -79,7 +74,7 @@ def reservation_page(request):
         )
         
         if res_status == 'APPROVED':
-            messages.success(request, f"[{equipment.name}] 예약이 즉시 승인되었습니다! (내부 이용자 혜택)")
+            messages.success(request, f"[{equipment.name}] 관리자 예약이 즉시 승인되었습니다!")
         else:
             messages.success(request, f"[{equipment.name}] 예약 신청이 완료되었습니다! (관리자 승인 대기)")
             
@@ -156,7 +151,7 @@ def cancel_reservation(request, res_id):
     return redirect('reservations:mypage')
 
 # ==========================================
-# 4. 회원가입 뷰 (내부 이용자 자동 승인)
+# 4. 회원가입 뷰 (내부 이용자 자동 승인 로직 제거, 학번 추가)
 # ==========================================
 def signup(request):
     if request.method == 'POST':
@@ -164,11 +159,11 @@ def signup(request):
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
         real_name = request.POST.get('real_name')
-        user_type = request.POST.get('user_type') # ✨ 추가: 내부/외부 구분
+        user_type = request.POST.get('user_type') # 내부/외부 구분
         affiliation = request.POST.get('affiliation')
-        advisor_id = request.POST.get('advisor_id')
+        student_id = request.POST.get('student_id') # ✨ 추가: 학번/사번
 
-        if not all([username, password, password_confirm, real_name, user_type, affiliation, advisor_id]):
+        if not all([username, password, password_confirm, real_name, user_type, affiliation, student_id]):
             messages.error(request, '모든 항목을 필수적으로 입력해주세요.')
             return render(request, 'reservations/signup.html')
 
@@ -179,7 +174,8 @@ def signup(request):
         try:
             user = User.objects.create_user(username=username, password=password)
             
-            # ✨ 내부 이용자(동국대)면 즉시 승인 처리
+            # ✨ 내/외부 상관없이 가입 시 일단 승인(단, 시스템 이용 자체의 제약은 나중에 설정 가능)
+            # 여기서는 내부 이용자의 자동 예약 승인만 뺐으므로 회원가입은 기존 로직을 유지하거나 통일할 수 있습니다.
             is_approved = True if user_type == 'INTERNAL' else False
             
             UserProfile.objects.create(
@@ -187,14 +183,14 @@ def signup(request):
                 real_name=real_name, 
                 user_type=user_type, 
                 affiliation=affiliation, 
-                advisor_id=advisor_id, 
+                student_id=student_id, # ✨ 추가
                 is_approved=is_approved
             )
             
             if is_approved:
-                messages.success(request, '회원가입이 완료되었습니다! 동국대 내부 이용자로 즉시 승인되었습니다. 로그인해주세요.')
+                messages.success(request, '회원가입이 완료되었습니다! 동국대 내부 이용자로 즉시 가입 승인되었습니다. 로그인해주세요.')
             else:
-                messages.success(request, '회원가입이 완료되었습니다. 외부 이용자는 관리자의 승인을 기다려주세요.')
+                messages.success(request, '회원가입이 완료되었습니다. 외부 이용자는 관리자의 가입 승인을 기다려주세요.')
                 
             return redirect('reservations:login')
         except IntegrityError:
@@ -204,7 +200,7 @@ def signup(request):
     return render(request, 'reservations/signup.html')
 
 # ==========================================
-# 5. 정산 데이터 CSV 엑셀 다운로드
+# 5. 정산 데이터 CSV 엑셀 다운로드 (학번 반영)
 # ==========================================
 def export_settlement_csv(request):
     if not request.user.is_staff:
@@ -215,7 +211,8 @@ def export_settlement_csv(request):
     response['Content-Disposition'] = 'attachment; filename="nbedl_settlement_data.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['예약 상태', '장비명', '예약자 계정', '예약자 실명', '이용자 구분', '소속', '지도교수 번호', '시작 일시', '종료 일시', '이용 시간(h)', '시간당 요금', '예상 청구금액(원)'])
+    # ✨ 교직원 번호 -> 학번/사번으로 변경
+    writer.writerow(['예약 상태', '장비명', '예약자 계정', '예약자 실명', '이용자 구분', '소속', '학번/사번', '시작 일시', '종료 일시', '이용 시간(h)', '시간당 요금', '예상 청구금액(원)'])
     
     reservations = Reservation.objects.all().order_by('-start_time')
     
@@ -225,7 +222,7 @@ def export_settlement_csv(request):
         
         real_name = res.user.profile.real_name if hasattr(res.user, 'profile') and res.user.profile.real_name else "-"
         user_type = res.user.profile.get_user_type_display() if hasattr(res.user, 'profile') and res.user.profile.user_type else "-"
-        advisor_id = res.user.profile.advisor_id if hasattr(res.user, 'profile') and res.user.profile.advisor_id else "-"
+        student_id = res.user.profile.student_id if hasattr(res.user, 'profile') and res.user.profile.student_id else "-" # ✨ 수정
         
         writer.writerow([
             res.get_status_display(),
@@ -234,7 +231,7 @@ def export_settlement_csv(request):
             real_name,
             user_type,
             res.affiliation,
-            advisor_id,
+            student_id, # ✨ 수정
             res.start_time.strftime('%Y-%m-%d %H:%M'),
             res.end_time.strftime('%Y-%m-%d %H:%M'),
             round(diff_hours, 1),
@@ -245,7 +242,7 @@ def export_settlement_csv(request):
     return response
 
 # ==========================================
-# (나머지 로직 유지)
+# 6. 마이페이지 뷰 (들여쓰기 및 쿼리 수정, 권한 로직 연동)
 # ==========================================
 def mypage(request):
     if not request.user.is_authenticated:
@@ -254,6 +251,7 @@ def mypage(request):
     equipments = Equipment.objects.all()
     selected_equipment = request.GET.get('equipment')
 
+    # ✨ 관리자와 일반 사용자의 예약 목록 필터링 분기 (들여쓰기 및 누락 복구!)
     if request.user.is_staff:
         reservations = Reservation.objects.all().order_by('-start_time')
     else:
@@ -266,14 +264,24 @@ def mypage(request):
     if request.user.is_staff:
         pending_count = Reservation.objects.filter(status='PENDING').count()
 
+    # ✨ 사용자 본인의 직접 사용 승인 장비 목록 가져오기
+    certified_equipments = []
+    if hasattr(request.user, 'profile'):
+        certified_equipments = request.user.profile.certified_equipment.all()
+
     return render(request, 'reservations/mypage.html', {
         'reservations': reservations,
         'equipments': equipments,
         'selected_equipment': selected_equipment,
-        'pending_count': pending_count
+        'pending_count': pending_count,
+        'certified_equipments': certified_equipments # ✨ 템플릿으로 전달
     })
 
+# ==========================================
+# (나머지 부가 기능 로직들)
+# ==========================================
 from django.contrib.auth import authenticate, login
+
 def custom_login_view(request):
     if request.method == 'POST':
         u = request.POST.get('username')
@@ -303,16 +311,16 @@ def find_password(request):
     temp_password = None
     if request.method == 'POST':
         username = request.POST.get('username')
-        advisor_id = request.POST.get('advisor_id')
+        student_id = request.POST.get('student_id') # ✨ 수정됨
 
         try:
             user = User.objects.get(username=username)
-            if hasattr(user, 'profile') and user.profile.advisor_id == advisor_id:
+            if hasattr(user, 'profile') and user.profile.student_id == student_id: # ✨ 수정됨
                 temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
                 user.set_password(temp_password)
                 user.save()
             else:
-                messages.error(request, "아이디 또는 교직원 번호가 일치하지 않습니다.")
+                messages.error(request, "아이디 또는 학번/사번이 일치하지 않습니다.") # ✨ 수정됨
         except User.DoesNotExist:
             messages.error(request, "존재하지 않는 아이디입니다.")
 
