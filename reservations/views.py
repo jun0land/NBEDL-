@@ -56,7 +56,12 @@ def reservation_page(request):
             messages.error(request, "해당 시간에 이 장비는 이미 예약되어 있습니다.")
             return redirect('reservations:reservation_page')
 
-        res_status = 'APPROVED' if request.user.is_staff else 'PENDING'
+        # ✨ 직접 사용 권한 체크: 관리자이거나, 해당 장비에 대한 권한이 있으면 자동 승인
+        is_certified = False
+        if hasattr(request.user, 'profile'):
+            is_certified = request.user.profile.certified_equipment.filter(id=equipment.id).exists()
+            
+        res_status = 'APPROVED' if (request.user.is_staff or is_certified) else 'PENDING'
 
         Reservation.objects.create(
             equipment=equipment,
@@ -71,7 +76,10 @@ def reservation_page(request):
         )
         
         if res_status == 'APPROVED':
-            messages.success(request, f"[{equipment.name}] 관리자 예약이 즉시 승인되었습니다!")
+            if request.user.is_staff:
+                messages.success(request, f"[{equipment.name}] 관리자 예약이 즉시 승인되었습니다!")
+            else:
+                messages.success(request, f"[{equipment.name}] 직접 사용 권한이 확인되어 자동으로 승인되었습니다!")
         else:
             messages.success(request, f"[{equipment.name}] 예약 신청이 완료되었습니다! (관리자 승인 대기)")
             
@@ -105,10 +113,8 @@ def get_reservations(request):
         user_name = res.user.profile.real_name if hasattr(res.user, 'profile') and res.user.profile.real_name else res.user.username
         eq_label = res.equipment.short_name if res.equipment.short_name else res.equipment.name
         
-        # ✨ 메인 달력 제목: [장비] 이름 (소속 제거하여 깔끔하게)
         title_text = f"[{eq_label}] {user_name}"
         
-        # ✨ 사이드바에서 쓸 수 있게 시간, 소속, 원래 장비이름 등 상세정보를 쪼개서 넘김
         events.append({
             'id': res.id,
             'title': title_text,
@@ -123,7 +129,7 @@ def get_reservations(request):
             'sample_details': res.sample_details,
             'start_time_str': res.start_time.strftime('%H:%M'),
             'end_time_str': res.end_time.strftime('%H:%M'),
-            'status': res.status, # ✨ 사이드바 표시용 상태값 추가
+            'status': res.status, # ✨ 상태 정보 넘기기
         })
         
     maintenances = EquipmentMaintenance.objects.all()
@@ -145,6 +151,7 @@ def get_reservations(request):
             'sample_details': maint.reason,
             'start_time_str': maint.start_time.strftime('%H:%M'),
             'end_time_str': maint.end_time.strftime('%H:%M'),
+            'status': 'MAINTENANCE',
         })
 
     return JsonResponse(events, safe=False)
