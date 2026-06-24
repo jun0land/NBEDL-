@@ -90,12 +90,16 @@ def reservation_page(request):
     
     pending_users_count = UserProfile.objects.filter(is_approved=False).count() if request.user.is_staff else 0
     
+    # ✨ NBEDL 소속 그룹 여부 확인 (화면에서 0원 처리용)
+    is_lab_member = request.user.groups.filter(name='NBEDL').exists() if request.user.is_authenticated else False
+    
     return render(request, 'reservations/calendar.html', {
         'equipments': equipments,
         'notices': notices,
         'block_reservations': config.block_reservations,
         'is_maintenance_mode': config.is_maintenance_mode,
         'pending_users_count': pending_users_count,
+        'is_lab_member': is_lab_member, # 템플릿으로 전달
     })
 
 # ==========================================
@@ -129,7 +133,7 @@ def get_reservations(request):
             'sample_details': res.sample_details,
             'start_time_str': res.start_time.strftime('%H:%M'),
             'end_time_str': res.end_time.strftime('%H:%M'),
-            'status': res.status, # ✨ 상태 정보 넘기기
+            'status': res.status, 
         })
         
     maintenances = EquipmentMaintenance.objects.all()
@@ -236,17 +240,24 @@ def export_settlement_csv(request):
     for res in reservations:
         diff_hours = (res.end_time - res.start_time).total_seconds() / 3600
         
-        profile = getattr(res.user, 'profile', None)
-        is_internal = profile and profile.user_type == 'INTERNAL'
-        base_rate = res.equipment.internal_hourly_rate if is_internal else res.equipment.external_hourly_rate
-        is_certified = profile and res.equipment in profile.certified_equipment.all()
-        final_rate = base_rate * 0.7 if is_certified else base_rate
+        # ✨ NBEDL 소속 그룹 확인 로직
+        is_lab_member = res.user.groups.filter(name='NBEDL').exists() if res.user else False
+        
+        if is_lab_member:
+            final_rate = 0 # 전면 무료
+        else:
+            profile = getattr(res.user, 'profile', None)
+            is_internal = profile and profile.user_type == 'INTERNAL'
+            base_rate = res.equipment.internal_hourly_rate if is_internal else res.equipment.external_hourly_rate
+            is_certified = profile and res.equipment in profile.certified_equipment.all()
+            final_rate = base_rate * 0.7 if is_certified else base_rate # 직접사용 할인
         
         cost = round(diff_hours * final_rate)
         
-        real_name = res.user.profile.real_name if profile and profile.real_name else "-"
-        user_type = res.user.profile.get_user_type_display() if profile and profile.user_type else "-"
-        student_id = res.user.profile.student_id if profile and profile.student_id else "-" 
+        profile_obj = getattr(res.user, 'profile', None)
+        real_name = profile_obj.real_name if profile_obj and profile_obj.real_name else "-"
+        user_type = profile_obj.get_user_type_display() if profile_obj and profile_obj.user_type else "-"
+        student_id = profile_obj.student_id if profile_obj and profile_obj.student_id else "-" 
         
         writer.writerow([
             res.get_status_display(),

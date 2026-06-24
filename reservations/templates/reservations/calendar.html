@@ -169,25 +169,23 @@
         </div>
     </div>
 
-    <!-- ✨ 예약 상태 범례 및 장비 필터링 영역 -->
     <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body bg-white rounded d-flex flex-wrap justify-content-between align-items-center gap-3 py-2">
-            <div class="d-flex align-items-center gap-2">
+        <div class="card-body bg-white rounded d-flex justify-content-between align-items-center flex-wrap gap-3 py-2">
+            <div class="d-flex align-items-center gap-3">
                 <span class="fw-bold text-secondary text-nowrap"><span class="fs-5">🔍</span> 장비별 모아보기 :</span>
-                <select id="calendar-equipment-filter" class="form-select form-select-sm border-secondary fw-semibold text-dark" style="max-width: 250px;">
+                <select id="calendar-equipment-filter" class="form-select form-select-sm border-secondary fw-semibold text-dark" style="max-width: 300px;">
                     <option value="">전체 장비 스케줄 보기</option>
                     {% for eq in equipments %}
-                        <!-- ✨ 필터 창에서도 약어가 보이도록 수정 -->
                         <option value="{{ eq.id }}">{{ eq.name }} {% if eq.short_name %}({{ eq.short_name }}){% endif %}</option>
                     {% endfor %}
                 </select>
             </div>
             
-            <!-- ✨ 예약 상태 색상 안내 레전드 추가 -->
-            <div class="d-flex gap-2 text-nowrap small fw-bold mt-2 mt-md-0">
-                <span class="badge bg-secondary shadow-sm px-2 py-1">대기 중 (회색)</span>
-                <span class="badge bg-success shadow-sm px-2 py-1">예약 승인 (초록색)</span>
-                <span class="badge bg-danger shadow-sm px-2 py-1">장비 점검 (빨간색)</span>
+            <!-- ✨ 예약 상태 색상 안내 범례 추가 -->
+            <div class="d-flex gap-3 text-muted small fw-bold">
+                <div><span class="d-inline-block rounded-circle me-1" style="width: 12px; height: 12px; background-color: #198754;"></span>승인 완료</div>
+                <div><span class="d-inline-block rounded-circle me-1" style="width: 12px; height: 12px; background-color: #6c757d;"></span>승인 대기</div>
+                <div><span class="d-inline-block rounded-circle me-1" style="width: 12px; height: 12px; background-color: #dc3545;"></span>장비 점검</div>
             </div>
         </div>
     </div>
@@ -328,8 +326,11 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // ✨ 사용자 정보 자바스크립트로 가져오기 (할인 계산용)
   var isInternalUser = {% if user.is_authenticated and user.profile.user_type == 'INTERNAL' %}true{% else %}false{% endif %};
+  
+  // ✨ NBEDL 소속 그룹 여부 파이썬에서 가져오기
+  var isLabMember = {% if is_lab_member %}true{% else %}false{% endif %};
+  
   var certifiedEquipments = [
       {% if user.is_authenticated and user.profile %}
           {% for eq in user.profile.certified_equipment.all %}
@@ -351,12 +352,10 @@
           displayEventTime: false, 
           eventDisplay: 'block', 
           
-          // ✨ 메인 달력 블록 커스터마이징 (시간 추가, 글씨 크기 조정)
           eventContent: function(arg) {
               let startStr = arg.event.extendedProps.start_time_str || '';
               let endStr = arg.event.extendedProps.end_time_str || '';
               
-              // 14:00~16:00 형식으로 예쁘게 뱃지 달기
               let timeBadge = '';
               if (startStr && endStr) {
                   timeBadge = `<span class="bg-white text-dark rounded px-1 me-1 shadow-sm d-inline-block" style="font-size: 0.75rem; font-weight: 700; line-height: 1.2;">${startStr}~${endStr}</span>`;
@@ -396,7 +395,6 @@
             {% endif %}
           },
           
-          // ✨ 날짜 클릭 시 우측 사이드바 로직 (장비별 그룹화 & 소속/상태 표시)
           dateClick: function(info) {
             let clickedDateStr = info.dateStr;
             document.getElementById('sidebar-placeholder').style.setProperty('display', 'none', 'important');
@@ -404,7 +402,6 @@
             
             let allEvents = calendar.getEvents();
             
-            // 해당 날짜의 이벤트만 필터링 (시간 순 정렬)
             let dayEvents = allEvents.filter(function(event) {
                 return event.start && event.start.toISOString().split('T')[0] === clickedDateStr;
             }).sort((a, b) => a.start - b.start);
@@ -419,7 +416,6 @@
                         <p class="small m-0">해당 날짜에 등록된<br>예약이나 정비 일정이 없습니다.</p>
                     </div>`;
             } else {
-                // ✨ 장비 이름별로 예약 내역 그룹화하기
                 let groupedEvents = {};
                 dayEvents.forEach(e => {
                     let eqName = e.extendedProps.equipment_name || '기타 장비';
@@ -430,7 +426,6 @@
                 let htmlContent = '';
                 
                 for (const [eqName, eventsArray] of Object.entries(groupedEvents)) {
-                    // 장비 구분선 및 타이틀
                     htmlContent += `<h6 class="fw-bold text-dark mt-3 mb-2 pb-1 border-bottom border-2" style="border-color: #ed542b !important;">🔬 ${eqName}</h6>`;
                     htmlContent += `<div class="d-flex flex-column gap-2 mb-3">`;
                     
@@ -438,19 +433,18 @@
                         let props = event.extendedProps;
                         let timeStr = `${props.start_time_str || ''} ~ ${props.end_time_str || ''}`;
                         
-                        // ✨ 상태 뱃지 생성 로직 (승인됨/대기중)
-                        let statusBadge = '';
-                        if (props.status === 'APPROVED') {
-                            statusBadge = '<span class="badge bg-success ms-1" style="font-size: 0.65rem;">승인됨</span>';
-                        } else if (props.status === 'PENDING') {
-                            statusBadge = '<span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">대기 중</span>';
-                        }
-
-                        // 배경색 및 테두리 표시 조정
                         let bgColorClass = 'bg-light';
                         let borderColor = event.backgroundColor;
                         if (borderColor === '#dc3545') bgColorClass = 'bg-danger-subtle';
                         else if (borderColor === '#ed542b') bgColorClass = 'bg-warning-subtle';
+                        
+                        // ✨ 사이드바에 승인/대기 뱃지 명확하게 표시
+                        let statusBadge = '';
+                        if (props.status === 'APPROVED') {
+                            statusBadge = `<span class="badge bg-success ms-2 fs-8 py-1">승인됨</span>`;
+                        } else if (props.status === 'PENDING') {
+                            statusBadge = `<span class="badge bg-secondary ms-2 fs-8 py-1">대기 중</span>`;
+                        }
 
                         htmlContent += `
                             <div class="border-start border-4 py-2 px-3 shadow-sm rounded-end ${bgColorClass}" style="border-color: ${borderColor} !important;">
@@ -477,7 +471,6 @@
           },
           
           eventClick: function(info) {
-              // 모달창에 들어갈 내용 세팅 (title 대신 원래 유저명 사용)
               document.getElementById('detailTitle').innerText = `${info.event.extendedProps.user_name}님의 예약 내역`;
               document.getElementById('detailEquipment').innerText = info.event.extendedProps.equipment_name || '정보 없음';
               document.getElementById('detailSample').innerText = info.event.extendedProps.sample_name || '정보 없음';
@@ -548,7 +541,6 @@
         calculateCostForSplit(); 
     }
 
-    // ✨ 할인 및 차등 요금을 실시간으로 프론트에서 계산하는 로직
     function calculateCostForSplit() {
         var eqSelect = document.getElementById('equipment_select');
         var sHidden = document.getElementById('start_time_hidden');
@@ -562,14 +554,21 @@
             return;
         }
 
+        // ✨ NBEDL 소속 인원일 경우 무조건 0원 처리 후 로직 종료
+        if (isLabMember) {
+            costDisplay.innerText = "0 원";
+            discountBadge.style.setProperty('display', 'block', 'important');
+            discountBadge.className = "d-block text-primary fw-bold mt-1"; 
+            discountBadge.innerText = "✨ NBEDL 전면 무료 적용!";
+            return;
+        }
+
         var selectedOption = eqSelect.options[eqSelect.selectedIndex];
         var internalRate = parseInt(selectedOption.getAttribute('data-internal-rate')) || 0;
         var externalRate = parseInt(selectedOption.getAttribute('data-external-rate')) || 0;
         
-        // 내 소속에 따라 기본 요금 결정
         var baseRate = isInternalUser ? internalRate : externalRate;
 
-        // 선택한 장비의 ID 확인 후 할인율 결정 (권한 있으면 30% 할인 = 0.7 곱하기)
         var eqId = parseInt(selectedOption.value);
         var isCertified = certifiedEquipments.includes(eqId);
         var finalRate = isCertified ? baseRate * 0.7 : baseRate;
@@ -586,6 +585,8 @@
             
             if (isCertified) {
                 discountBadge.style.setProperty('display', 'block', 'important');
+                discountBadge.className = "d-block text-success fw-bold mt-1"; 
+                discountBadge.innerText = "✨ 직접 사용 할인 30% 적용!";
             } else {
                 discountBadge.style.setProperty('display', 'none', 'important');
             }
@@ -659,11 +660,7 @@
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2"><strong>예약 방법:</strong> 달력 우측 하단의 <strong>[+] 버튼</strong>을 눌러 시간과 샘플 정보를 입력하여 신청합니다. (모든 일반 예약은 '승인 대기' 상태로 시작됩니다.)</li>
-                <li class="mb-2"><strong>예약 상태 표시:</strong> 달력 및 우측 사이드바에서 예약 상태를 색상으로 구분합니다. 
-                    <span class="badge bg-secondary shadow-sm ms-1">대기 중 (회색)</span> 
-                    <span class="badge bg-success shadow-sm ms-1">승인됨 (초록색)</span>
-                </li>
-                <li class="text-danger fw-bold">💡 [특례] 직접 사용 권한: 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에 ✅ 뱃지가 표시되며 예약 즉시 자동 승인됩니다.</li>
+                <li class="text-danger fw-bold">💡 [특례] 직접 사용 권한: 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에 ✅ 뱃지가 표시되며, 해당 장비는 관리자 보조 없이 독립적으로 사용할 수 있습니다.</li>
             </ul>
         </div>
 
@@ -671,7 +668,8 @@
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2"><strong>요금 차등 적용:</strong> 소속(내부/외부)에 따라 장비 이용 요금이 다르게 책정되어 청구됩니다. (예약 창에서 소속에 맞는 요금이 자동 적용됨)</li>
-                <li><strong class="text-success">✨ 할인 혜택:</strong> '직접 사용 권한'을 보유한 사용자가 해당 장비를 직접 운용할 경우, <strong>이용료의 30%가 자동 할인</strong>되어 청구됩니다.</li>
+                <li class="mb-2"><strong class="text-success">✨ 할인 혜택:</strong> '직접 사용 권한'을 보유한 사용자가 해당 장비를 직접 운용할 경우, <strong>이용료의 30%가 자동 할인</strong>되어 청구됩니다.</li>
+                <li><strong class="text-primary">✨ NBEDL 소속 혜택:</strong> 연구실(NBEDL) 소속 인원은 관리자 부여 그룹에 한하여 전 장비 <strong>무료(0원)</strong>로 이용 가능합니다.</li>
             </ul>
         </div>
 
