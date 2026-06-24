@@ -181,7 +181,6 @@
                 </select>
             </div>
             
-            <!-- ✨ 예약 상태 색상 안내 범례 추가 -->
             <div class="d-flex gap-3 text-muted small fw-bold">
                 <div><span class="d-inline-block rounded-circle me-1" style="width: 12px; height: 12px; background-color: #198754;"></span>승인 완료</div>
                 <div><span class="d-inline-block rounded-circle me-1" style="width: 12px; height: 12px; background-color: #6c757d;"></span>승인 대기</div>
@@ -327,8 +326,6 @@
 
 <script>
   var isInternalUser = {% if user.is_authenticated and user.profile.user_type == 'INTERNAL' %}true{% else %}false{% endif %};
-  
-  // ✨ NBEDL 소속 그룹 여부 파이썬에서 가져오기
   var isLabMember = {% if is_lab_member %}true{% else %}false{% endif %};
   
   var certifiedEquipments = [
@@ -379,11 +376,31 @@
                     var eDate = document.getElementById('end_date');
                     var sTime = document.getElementById('start_time_select');
                     var eTime = document.getElementById('end_time_select');
+                    var eqSelect = document.getElementById('equipment_select');
                     
-                    if(sDate) sDate.value = info.dateStr;
-                    if(eDate) eDate.value = info.dateStr;
-                    if(sTime) sTime.value = "09:00"; 
-                    if(eTime) eTime.value = "18:00"; 
+                    // ✨ 장비 선택창 및 금액 초기화
+                    if (eqSelect) {
+                        eqSelect.selectedIndex = 0;
+                        eqSelect.dispatchEvent(new Event('change'));
+                    }
+
+                    // ✨ 날짜 입력 후 브라우저가 화면을 즉시 갱신하도록 change 이벤트를 강제 발생시킵니다!
+                    if(sDate) {
+                        sDate.value = info.dateStr;
+                        sDate.dispatchEvent(new Event('change'));
+                    }
+                    if(eDate) {
+                        eDate.value = info.dateStr;
+                        eDate.dispatchEvent(new Event('change'));
+                    }
+                    if(sTime) {
+                        sTime.value = "09:00";
+                        sTime.dispatchEvent(new Event('change'));
+                    }
+                    if(eTime) {
+                        eTime.value = "18:00";
+                        eTime.dispatchEvent(new Event('change'));
+                    }
                     
                     if(typeof updateHiddenAndCalculate === 'function') {
                         updateHiddenAndCalculate();
@@ -438,7 +455,6 @@
                         if (borderColor === '#dc3545') bgColorClass = 'bg-danger-subtle';
                         else if (borderColor === '#ed542b') bgColorClass = 'bg-warning-subtle';
                         
-                        // ✨ 사이드바에 승인/대기 뱃지 명확하게 표시
                         let statusBadge = '';
                         if (props.status === 'APPROVED') {
                             statusBadge = `<span class="badge bg-success ms-2 fs-8 py-1">승인됨</span>`;
@@ -554,7 +570,6 @@
             return;
         }
 
-        // ✨ NBEDL 소속 인원일 경우 무조건 0원 처리 후 로직 종료
         if (isLabMember) {
             costDisplay.innerText = "0 원";
             discountBadge.style.setProperty('display', 'block', 'important');

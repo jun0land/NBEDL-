@@ -1,11 +1,11 @@
 from django.contrib import admin
 from .models import Equipment, Reservation, IssueReport, UserProfile, Notice, SystemConfig, EquipmentMaintenance
 
-# ✨ 1. 장비 목록 관리 (약어 표시 및 빠른 수정 추가)
+# ✨ 1. 장비 목록 관리
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
     list_display = ['name', 'short_name', 'internal_hourly_rate', 'external_hourly_rate']
-    list_editable = ['short_name', 'internal_hourly_rate', 'external_hourly_rate'] # ✨ 약어 바로 수정 가능
+    list_editable = ['short_name', 'internal_hourly_rate', 'external_hourly_rate'] 
     search_fields = ['name', 'short_name']
 
 # 📅 2. 예약 관리
@@ -40,14 +40,23 @@ class NoticeAdmin(admin.ModelAdmin):
     search_fields = ('title', 'content')
     list_filter = ('created_at',)
 
-# 🧑‍🔬 6. 일반 회원 계정 관리 (직접 사용 권한 부여 포함)
+# 🧑‍🔬 6. 일반 회원 계정 관리 (✨ 소속 그룹 칼럼 추가!)
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'real_name', 'user_type', 'is_approved', 'affiliation')
+    # ✨ get_groups 함수를 list_display에 추가하여 목록에 띄웁니다.
+    list_display = ('user', 'real_name', 'user_type', 'get_groups', 'is_approved', 'affiliation')
     list_filter = ('user_type', 'is_approved')
     search_fields = ('user__username', 'real_name', 'student_id')
     
     filter_horizontal = ('certified_equipment',)
+
+    # ✨ 사용자 계정에 연결된 그룹(예: NBEDL)을 가져와서 문자열로 반환하는 커스텀 함수
+    @admin.display(description='소속 그룹(무료 등)')
+    def get_groups(self, obj):
+        groups = obj.user.groups.all()
+        if groups:
+            return ", ".join([group.name for group in groups])
+        return "-"
 
 # 🛠️ 7. 장비 점검 일정 관리
 @admin.register(EquipmentMaintenance)
