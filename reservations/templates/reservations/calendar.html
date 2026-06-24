@@ -18,7 +18,6 @@
             word-break: break-all !important;
             padding: 4px 6px !important;
             margin-bottom: 3px !important;
-            font-size: 0.85em !important;
             line-height: 1.3 !important;
             border-radius: 4px !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -47,7 +46,12 @@
         .add-event-btn:hover { background-color: #f68b21; }
         .fc-daygrid-day:hover .add-event-btn { display: block !important; }
 
-        #sidebar-content { max-height: 550px; overflow-y: auto; }
+        /* 사이드바 스크롤 바 스타일링 */
+        #sidebar-content { max-height: 550px; overflow-y: auto; overflow-x: hidden; }
+        #sidebar-content::-webkit-scrollbar { width: 6px; }
+        #sidebar-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px;}
+        #sidebar-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px;}
+        #sidebar-content::-webkit-scrollbar-thumb:hover { background: #999; }
         
         .fc .fc-button-primary { background-color: #ed542b !important; border-color: #ed542b !important; }
         .fc .fc-button-primary:hover { background-color: #f68b21 !important; border-color: #f68b21 !important; }
@@ -165,33 +169,46 @@
         </div>
     </div>
 
+    <!-- ✨ 예약 상태 범례 및 장비 필터링 영역 -->
     <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body bg-white rounded d-flex align-items-center gap-3 py-2">
-            <span class="fw-bold text-secondary text-nowrap"><span class="fs-5">🔍</span> 장비별 모아보기 :</span>
-            <select id="calendar-equipment-filter" class="form-select form-select-sm border-secondary fw-semibold text-dark" style="max-width: 250px;">
-                <option value="">전체 장비 스케줄 보기</option>
-                {% for eq in equipments %}
-                    <option value="{{ eq.id }}">{{ eq.name }}</option>
-                {% endfor %}
-            </select>
+        <div class="card-body bg-white rounded d-flex flex-wrap justify-content-between align-items-center gap-3 py-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-secondary text-nowrap"><span class="fs-5">🔍</span> 장비별 모아보기 :</span>
+                <select id="calendar-equipment-filter" class="form-select form-select-sm border-secondary fw-semibold text-dark" style="max-width: 250px;">
+                    <option value="">전체 장비 스케줄 보기</option>
+                    {% for eq in equipments %}
+                        <!-- ✨ 필터 창에서도 약어가 보이도록 수정 -->
+                        <option value="{{ eq.id }}">{{ eq.name }} {% if eq.short_name %}({{ eq.short_name }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- ✨ 예약 상태 색상 안내 레전드 추가 -->
+            <div class="d-flex gap-2 text-nowrap small fw-bold mt-2 mt-md-0">
+                <span class="badge bg-secondary shadow-sm px-2 py-1">대기 중 (회색)</span>
+                <span class="badge bg-success shadow-sm px-2 py-1">예약 승인 (초록색)</span>
+                <span class="badge bg-danger shadow-sm px-2 py-1">장비 점검 (빨간색)</span>
+            </div>
         </div>
     </div>
 
     <div class="row">
+        <!-- 왼쪽: 메인 달력 -->
         <div class="col-lg-8 col-xl-9 mb-4">
             <div id='calendar'></div>
         </div>
         
+        <!-- 오른쪽: 사이드바 (일일 상세 현황) -->
         <div class="col-lg-4 col-xl-3 mb-4">
             <div class="card shadow-sm h-100" style="min-height: 600px;">
-                <div class="card-header bg-dark text-white py-3">
+                <div class="card-header bg-dark text-white py-3 sticky-top">
                     <h5 class="card-title m-0 fw-bold" id="sidebar-title">📋 일일 예약 현황</h5>
                 </div>
                 <div class="card-body p-0 d-flex flex-column" id="sidebar-body">
                     <div class="my-auto text-center py-5 text-muted px-3" id="sidebar-placeholder">
                         <p class="fs-1 mb-2">👈</p>
                         <h5 class="fw-bold text-secondary">날짜를 클릭하시오</h5>
-                        <small class="text-wrap d-block mt-2">달력에서 날짜 셀을 클릭하시면<br>해당 일자의 상세 타임라인 목록이 표시됩니다.</small>
+                        <small class="text-wrap d-block mt-2">달력에서 날짜 셀을 클릭하시면<br>해당 일자의 <b class="text-dark">장비별 상세 타임라인</b>이 표시됩니다.</small>
                     </div>
                     <div id="sidebar-content" class="p-3"></div>
                 </div>
@@ -215,9 +232,8 @@
             <select class="form-select border-primary" id="equipment_select" name="equipment" style="border-color: #fbb812 !important;" required>
                 <option value="" selected disabled>사용하실 장비를 선택해 주세요</option>
                 {% for eq in equipments %}
-                    <!-- ✨ 내/외부 요금을 옵션의 data 속성으로 숨겨둡니다 -->
                     <option value="{{ eq.id }}" data-internal-rate="{{ eq.internal_hourly_rate|default:0 }}" data-external-rate="{{ eq.external_hourly_rate|default:0 }}">
-                        {{ eq.name }} (내부: {{ eq.internal_hourly_rate }}원 / 외부: {{ eq.external_hourly_rate }}원)
+                        {{ eq.name }} {% if eq.short_name %}({{ eq.short_name }}){% endif %} - 내부: {{ eq.internal_hourly_rate }}원 / 외부: {{ eq.external_hourly_rate }}원
                     </option>
                 {% endfor %}
             </select>
@@ -335,6 +351,21 @@
           displayEventTime: false, 
           eventDisplay: 'block', 
           
+          // ✨ 메인 달력 블록 커스터마이징 (시간 추가, 글씨 크기 조정)
+          eventContent: function(arg) {
+              let startStr = arg.event.extendedProps.start_time_str || '';
+              let endStr = arg.event.extendedProps.end_time_str || '';
+              
+              // 14:00~16:00 형식으로 예쁘게 뱃지 달기
+              let timeBadge = '';
+              if (startStr && endStr) {
+                  timeBadge = `<span class="bg-white text-dark rounded px-1 me-1 shadow-sm d-inline-block" style="font-size: 0.75rem; font-weight: 700; line-height: 1.2;">${startStr}~${endStr}</span>`;
+              }
+              
+              let titleHtml = `<div class="text-truncate" style="font-size: 0.85rem; font-weight: 500;">${timeBadge}${arg.event.title}</div>`;
+              return { html: titleHtml };
+          },
+          
           dayCellDidMount: function(info) {
             {% if not block_reservations or user.is_staff %}
                 let btn = document.createElement('div');
@@ -365,15 +396,18 @@
             {% endif %}
           },
           
+          // ✨ 날짜 클릭 시 우측 사이드바 로직 (장비별 그룹화 & 소속/상태 표시)
           dateClick: function(info) {
             let clickedDateStr = info.dateStr;
             document.getElementById('sidebar-placeholder').style.setProperty('display', 'none', 'important');
-            document.getElementById('sidebar-title').innerText = `📅 ${clickedDateStr} 상세 현황`;
+            document.getElementById('sidebar-title').innerText = `📅 ${clickedDateStr} 예약 현황`;
             
             let allEvents = calendar.getEvents();
+            
+            // 해당 날짜의 이벤트만 필터링 (시간 순 정렬)
             let dayEvents = allEvents.filter(function(event) {
-                return event.startStr && event.startStr.split('T')[0] === clickedDateStr;
-            });
+                return event.start && event.start.toISOString().split('T')[0] === clickedDateStr;
+            }).sort((a, b) => a.start - b.start);
             
             let contentEl = document.getElementById('sidebar-content');
             contentEl.innerHTML = '';
@@ -385,32 +419,66 @@
                         <p class="small m-0">해당 날짜에 등록된<br>예약이나 정비 일정이 없습니다.</p>
                     </div>`;
             } else {
-                let ul = document.createElement('ul');
-                ul.className = 'list-group list-group-flush';
-                
-                dayEvents.forEach(function(event) {
-                    let li = document.createElement('li');
-                    li.className = 'list-group-item border-start border-4 py-3 px-3 mb-2 shadow-sm rounded-end';
-                    
-                    if (event.backgroundColor === '#dc3545') {
-                        li.style.borderColor = '#dc3545';
-                        li.classList.add('bg-danger-subtle');
-                    } else if (event.backgroundColor === '#ed542b') {
-                        li.style.borderColor = '#ed542b';
-                        li.classList.add('bg-warning-subtle');
-                    } else {
-                        li.style.borderColor = '#948a88';
-                        li.classList.add('bg-light');
-                    }
-                    
-                    li.innerHTML = `<div class="fw-bold text-dark text-break small">${event.title}</div>`;
-                    ul.appendChild(li);
+                // ✨ 장비 이름별로 예약 내역 그룹화하기
+                let groupedEvents = {};
+                dayEvents.forEach(e => {
+                    let eqName = e.extendedProps.equipment_name || '기타 장비';
+                    if (!groupedEvents[eqName]) groupedEvents[eqName] = [];
+                    groupedEvents[eqName].push(e);
                 });
-                contentEl.appendChild(ul);
+
+                let htmlContent = '';
+                
+                for (const [eqName, eventsArray] of Object.entries(groupedEvents)) {
+                    // 장비 구분선 및 타이틀
+                    htmlContent += `<h6 class="fw-bold text-dark mt-3 mb-2 pb-1 border-bottom border-2" style="border-color: #ed542b !important;">🔬 ${eqName}</h6>`;
+                    htmlContent += `<div class="d-flex flex-column gap-2 mb-3">`;
+                    
+                    eventsArray.forEach(event => {
+                        let props = event.extendedProps;
+                        let timeStr = `${props.start_time_str || ''} ~ ${props.end_time_str || ''}`;
+                        
+                        // ✨ 상태 뱃지 생성 로직 (승인됨/대기중)
+                        let statusBadge = '';
+                        if (props.status === 'APPROVED') {
+                            statusBadge = '<span class="badge bg-success ms-1" style="font-size: 0.65rem;">승인됨</span>';
+                        } else if (props.status === 'PENDING') {
+                            statusBadge = '<span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">대기 중</span>';
+                        }
+
+                        // 배경색 및 테두리 표시 조정
+                        let bgColorClass = 'bg-light';
+                        let borderColor = event.backgroundColor;
+                        if (borderColor === '#dc3545') bgColorClass = 'bg-danger-subtle';
+                        else if (borderColor === '#ed542b') bgColorClass = 'bg-warning-subtle';
+
+                        htmlContent += `
+                            <div class="border-start border-4 py-2 px-3 shadow-sm rounded-end ${bgColorClass}" style="border-color: ${borderColor} !important;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <span class="badge bg-secondary fs-7 shadow-sm">${timeStr}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <span class="small fw-bold text-dark">${props.user_name}</span>
+                                </div>
+                                <div class="fw-bold text-dark text-break small mb-1" style="font-size: 0.9rem;">
+                                    ${props.sample_name || event.title.replace(/\[.*?\]\s*/, '')}
+                                </div>
+                                <div class="text-muted small d-flex align-items-center">
+                                    <span class="me-1">🏢</span> ${props.affiliation || '소속 없음'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    htmlContent += `</div>`;
+                }
+                contentEl.innerHTML = htmlContent;
             }
           },
+          
           eventClick: function(info) {
-              document.getElementById('detailTitle').innerText = info.event.title;
+              // 모달창에 들어갈 내용 세팅 (title 대신 원래 유저명 사용)
+              document.getElementById('detailTitle').innerText = `${info.event.extendedProps.user_name}님의 예약 내역`;
               document.getElementById('detailEquipment').innerText = info.event.extendedProps.equipment_name || '정보 없음';
               document.getElementById('detailSample').innerText = info.event.extendedProps.sample_name || '정보 없음';
               document.getElementById('detailDetails').innerText = info.event.extendedProps.sample_details || '입력된 세부 정보가 없습니다.';
@@ -591,7 +659,11 @@
         <div class="p-3 bg-white border rounded mb-4 shadow-sm">
             <ul class="mb-0">
                 <li class="mb-2"><strong>예약 방법:</strong> 달력 우측 하단의 <strong>[+] 버튼</strong>을 눌러 시간과 샘플 정보를 입력하여 신청합니다. (모든 일반 예약은 '승인 대기' 상태로 시작됩니다.)</li>
-                <li class="text-danger fw-bold">💡 [특례] 직접 사용 권한: 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에 ✅ 뱃지가 표시되며, 해당 장비는 관리자 보조 없이 독립적으로 사용할 수 있습니다.</li>
+                <li class="mb-2"><strong>예약 상태 표시:</strong> 달력 및 우측 사이드바에서 예약 상태를 색상으로 구분합니다. 
+                    <span class="badge bg-secondary shadow-sm ms-1">대기 중 (회색)</span> 
+                    <span class="badge bg-success shadow-sm ms-1">승인됨 (초록색)</span>
+                </li>
+                <li class="text-danger fw-bold">💡 [특례] 직접 사용 권한: 관리자로부터 특정 장비에 대한 '직접 사용 권한'을 부여받은 경우, 마이페이지에 ✅ 뱃지가 표시되며 예약 즉시 자동 승인됩니다.</li>
             </ul>
         </div>
 
@@ -627,7 +699,6 @@
   </div>
 </div>
 
-<!-- ✨ 공지사항 상세 모달창들 (반복문) -->
 {% for notice in notices %}
 <div class="modal fade" id="noticeModal{{ notice.id }}" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

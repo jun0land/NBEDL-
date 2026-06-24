@@ -3,12 +3,13 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 
-# ✨ 1. 기존 '장비' 테이블에 '시간당 요금'을 내/외부로 분리
+# ✨ 1. 기존 '장비' 테이블에 '장비 약어'를 추가했습니다.
 class Equipment(models.Model):
     name = models.CharField(max_length=100) # 예: 스핀 코터, Sputter System
+    short_name = models.CharField(max_length=30, blank=True, null=True, verbose_name="장비 약어 (달력 표시용)") # ✨ 추가된 부분
     description = models.TextField(blank=True) # 장비 설명이나 위치
-    internal_hourly_rate = models.IntegerField(default=0, verbose_name="내부 시간당 요금(원)") # ✨ 변경
-    external_hourly_rate = models.IntegerField(default=0, verbose_name="외부 시간당 요금(원)") # ✨ 추가
+    internal_hourly_rate = models.IntegerField(default=0, verbose_name="내부 시간당 요금(원)")
+    external_hourly_rate = models.IntegerField(default=0, verbose_name="외부 시간당 요금(원)")
 
     def __str__(self):
         return self.name
@@ -40,7 +41,7 @@ class IssueReport(models.Model):
     def __str__(self):
         return self.title
 
-# ✨ 4. 사용자 추가 정보 (소속 및 승인 여부, 등급 추가)
+# 4. 사용자 추가 정보 (소속 및 승인 여부, 등급 추가)
 class UserProfile(models.Model):
     USER_TYPE_CHOICES = (
         ('INTERNAL', '내부 이용자 (동국대)'),
@@ -50,32 +51,27 @@ class UserProfile(models.Model):
     real_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="이름") 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
-    # 내부/외부 이용자 구분
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='EXTERNAL', verbose_name="이용자 구분")
-    
     affiliation = models.CharField(max_length=100, verbose_name="소속")
     is_approved = models.BooleanField(default=False, verbose_name="관리자 승인 여부")
-    
-    # ✨ 교직원 번호 -> 학번/사번으로 변경
     student_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="개인 학번/사번")
-    
-    # ✨ 직접 사용 가능 장비 권한 (다대다 관계) -> 들여쓰기 교정 완료!
     certified_equipment = models.ManyToManyField('Equipment', blank=True, verbose_name="직접 사용 가능 장비")
 
     def __str__(self):
         name = self.real_name if self.real_name else self.user.username
         return f"[{self.get_user_type_display()}] {name} ({self.affiliation})"
 
-# ✨ 5. 공지사항 모델 신규 생성
+# 5. 공지사항 모델
 class Notice(models.Model):
     title = models.CharField(max_length=200, verbose_name="공지 제목")
     content = models.TextField(verbose_name="공지 내용")
     is_pinned = models.BooleanField(default=False, verbose_name='📌 상단 고정')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self): # -> 콜론(:) 누락 교정 완료!
+    def __str__(self):
         return self.title
 
+# 6. 시스템 제어판
 class SystemConfig(models.Model):
     is_maintenance_mode = models.BooleanField(default=False, verbose_name="전체 사이트 점검 모드 (접속 차단)")
     block_reservations = models.BooleanField(default=False, verbose_name="신규 예약 막아두기 (달력 조회는 가능)")
@@ -92,7 +88,7 @@ class SystemConfig(models.Model):
     def __str__(self):
         return "시스템 글로벌 제어판"
 
-# ✨ [업데이트 2번] 개별 장비 점검/고장 관리 모델 추가
+# 7. 개별 장비 점검/고장 관리 모델
 class EquipmentMaintenance(models.Model):
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, verbose_name="장비")
     start_time = models.DateTimeField(verbose_name="점검 시작 일시")
