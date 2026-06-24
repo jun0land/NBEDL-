@@ -372,39 +372,30 @@
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation(); 
                     
+                    // ✨ 1. 요소 가져오기
                     var sDate = document.getElementById('start_date');
                     var eDate = document.getElementById('end_date');
                     var sTime = document.getElementById('start_time_select');
                     var eTime = document.getElementById('end_time_select');
                     var eqSelect = document.getElementById('equipment_select');
                     
-                    // ✨ 장비 선택창 및 금액 초기화
-                    if (eqSelect) {
-                        eqSelect.selectedIndex = 0;
-                        eqSelect.dispatchEvent(new Event('change'));
-                    }
+                    // ✨ 2. 명시적으로 값을 꽂아 넣기 (브라우저 버그 방지)
+                    if (sDate) sDate.value = info.dateStr;
+                    if (eDate) eDate.value = info.dateStr;
+                    if (sTime) sTime.value = "09:00";
+                    if (eTime) eTime.value = "18:00";
+                    if (eqSelect) eqSelect.selectedIndex = 0;
 
-                    // ✨ 날짜 입력 후 브라우저가 화면을 즉시 갱신하도록 change 이벤트를 강제 발생시킵니다!
-                    if(sDate) {
-                        sDate.value = info.dateStr;
-                        sDate.dispatchEvent(new Event('change'));
-                    }
-                    if(eDate) {
-                        eDate.value = info.dateStr;
-                        eDate.dispatchEvent(new Event('change'));
-                    }
-                    if(sTime) {
-                        sTime.value = "09:00";
-                        sTime.dispatchEvent(new Event('change'));
-                    }
-                    if(eTime) {
-                        eTime.value = "18:00";
-                        eTime.dispatchEvent(new Event('change'));
-                    }
+                    // ✨ 3. 백엔드 전송용 숨겨진 값(Hidden Input)도 강제 세팅
+                    var sHidden = document.getElementById('start_time_hidden');
+                    var eHidden = document.getElementById('end_time_hidden');
+                    if (sHidden) sHidden.value = info.dateStr + 'T09:00';
+                    if (eHidden) eHidden.value = info.dateStr + 'T18:00';
                     
-                    if(typeof updateHiddenAndCalculate === 'function') {
-                        updateHiddenAndCalculate();
-                    }
+                    // ✨ 4. 금액 표시도 0원으로 완전 초기화
+                    document.getElementById('expected_cost').innerText = "0 원";
+                    var discountBadge = document.getElementById('discount_badge');
+                    if (discountBadge) discountBadge.style.setProperty('display', 'none', 'important');
                     
                     resModal.show();
                 });
