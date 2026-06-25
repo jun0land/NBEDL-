@@ -119,6 +119,10 @@ def get_reservations(request):
         
         title_text = f"[{eq_label}] {user_name}"
         
+        # ✨ DB의 UTC 시간을 한국 시간(로컬 타임)으로 변환
+        local_start = timezone.localtime(res.start_time)
+        local_end = timezone.localtime(res.end_time)
+        
         events.append({
             'id': res.id,
             'title': title_text,
@@ -131,8 +135,8 @@ def get_reservations(request):
             'affiliation': res.affiliation,
             'sample_name': res.sample_name,
             'sample_details': res.sample_details,
-            'start_time_str': res.start_time.strftime('%H:%M'),
-            'end_time_str': res.end_time.strftime('%H:%M'),
+            'start_time_str': local_start.strftime('%H:%M'), # ✨ 24시간제 형식 적용 (예: 14:00)
+            'end_time_str': local_end.strftime('%H:%M'),     # ✨ 24시간제 형식 적용
             'status': res.status, 
         })
         
@@ -142,6 +146,11 @@ def get_reservations(request):
         
     for maint in maintenances:
         eq_label = maint.equipment.short_name if maint.equipment.short_name else maint.equipment.name
+        
+        # ✨ 점검 시간도 한국 시간으로 변환
+        local_start = timezone.localtime(maint.start_time)
+        local_end = timezone.localtime(maint.end_time)
+        
         events.append({
             'title': f"🛠️ [점검] {eq_label}",
             'start': maint.start_time.isoformat(),
@@ -153,8 +162,8 @@ def get_reservations(request):
             'affiliation': '시스템 점검',
             'sample_name': '정기 점검 및 수리',
             'sample_details': maint.reason,
-            'start_time_str': maint.start_time.strftime('%H:%M'),
-            'end_time_str': maint.end_time.strftime('%H:%M'),
+            'start_time_str': local_start.strftime('%H:%M'), # ✨ 24시간제 형식 적용
+            'end_time_str': local_end.strftime('%H:%M'),     # ✨ 24시간제 형식 적용
             'status': 'MAINTENANCE',
         })
 
