@@ -237,6 +237,13 @@ def export_settlement_csv(request):
     
     reservations = Reservation.objects.all().order_by('-start_time')
     
+    # ✨ 상태값을 한글로 변환하기 위한 딕셔너리 추가
+    status_map = {
+        'PENDING': '대기 중',
+        'APPROVED': '승인됨',
+        'REJECTED': '반려됨'
+    }
+    
     for res in reservations:
         diff_hours = (res.end_time - res.start_time).total_seconds() / 3600
         
@@ -260,7 +267,7 @@ def export_settlement_csv(request):
         student_id = profile_obj.student_id if profile_obj and profile_obj.student_id else "-" 
         
         writer.writerow([
-            res.get_status_display(),
+            status_map.get(res.status, res.status), # ✨ 오류가 나던 부분 수정 완료
             res.equipment.name,
             res.user.username,
             real_name,
